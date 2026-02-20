@@ -119,6 +119,7 @@ class Formulario_Hapvida_Webhook_Retry {
                 $vendedor = isset($webhook['data']['vendedor_nome']) ? $webhook['data']['vendedor_nome'] : 'N/A';
                 error_log("HAPVIDA RETRY CRITICAL: Lead PERDIDO DEFINITIVAMENTE apos {$total_attempts} tentativas totais - Cliente: {$nome}, Tel: {$telefone}, Vendedor: {$vendedor}");
                 $this->log("❌ FALHA PERMANENTE: Lead {$nome} ({$telefone}) perdido apos {$total_attempts} tentativas");
+                $this->notify_permanent_failure($webhook);
                 $fail_count++;
                 continue;
             }
@@ -136,6 +137,7 @@ class Formulario_Hapvida_Webhook_Retry {
                 $webhook['error'] = 'URL do webhook não encontrada para retry';
                 $has_changes = true;
                 error_log("HAPVIDA RETRY: URL nao encontrada para webhook {$webhook['id']} - marcado como falha permanente");
+                $this->notify_permanent_failure($webhook);
                 $fail_count++;
                 continue;
             }
@@ -183,6 +185,7 @@ class Formulario_Hapvida_Webhook_Retry {
                     $vendedor = isset($webhook['data']['vendedor_nome']) ? $webhook['data']['vendedor_nome'] : 'N/A';
                     error_log("HAPVIDA RETRY CRITICAL: Lead PERDIDO DEFINITIVAMENTE apos {$total_attempts} tentativas totais (1 imediata + {$attempt_num} background) - Cliente: {$nome}, Tel: {$telefone}, Vendedor: {$vendedor}");
                     $this->log("❌ FALHA PERMANENTE: Lead {$nome} ({$telefone}) perdido apos {$total_attempts} tentativas");
+                    $this->notify_permanent_failure($webhook);
                 }
 
                 $fail_count++;
@@ -195,6 +198,71 @@ class Formulario_Hapvida_Webhook_Retry {
 
         if ($processed > 0) {
             $this->log("=== RETRY CRON: Processados {$processed} webhooks - {$success_count} sucesso, {$fail_count} falhas ===");
+        }
+    }
+
+    /**
+     * Envia email de alerta quando um webhook falha permanentemente
+     */
+    private function notify_permanent_failure($webhook) {
+        $to = 'netoppcem@gmail.com';
+        $data = isset($webhook['data']) ? $webhook['data'] : array();
+
+        $nome = isset($data['nome']) ? $data['nome'] : 'N/A';
+        $telefone = isset($data['telefone']) ? $data['telefone'] : 'N/A';
+        $email_lead = isset($data['email']) ? $data['email'] : 'N/A';
+        $vendedor = isset($data['vendedor_nome']) ? $data['vendedor_nome'] : 'N/A';
+        $lead_id = isset($data['lead_id']) ? $data['lead_id'] : 'N/A';
+        $grupo = isset($data['grupo']) ? $data['grupo'] : 'N/A';
+        $erro = isset($webhook['error']) ? $webhook['error'] : 'Desconhecido';
+
+        $subject = "[ALERTA HAPVIDA] Webhook falhou - Lead {$nome} ({$telefone})";
+
+        $body = "⚠️ ALERTA: Um webhook falhou permanentemente após todas as tentativas.\n\n";
+        $body .= "========================================\n";
+        $body .= "DADOS DO LEAD\n";
+        $body .= "========================================\n";
+        $body .= "Lead ID: {$lead_id}\n";
+        $body .= "Nome: {$nome}\n";
+        $body .= "Telefone: {$telefone}\n";
+        $body .= "Email: {$email_lead}\n";
+        $body .= "Plano: " . (isset($data['tipo_de_plano']) ? $data['tipo_de_plano'] : 'N/A') . "\n";
+        $body .= "Qtd Pessoas: " . (isset($data['quantidade_de_pessoas']) ? $data['quantidade_de_pessoas'] : 'N/A') . "\n";
+        $body .= "Idades: " . (isset($data['idades']) ? $data['idades'] : 'N/A') . "\n";
+        $body .= "Página: " . (isset($data['pagina_origem']) ? $data['pagina_origem'] : 'N/A') . "\n\n";
+
+        $body .= "========================================\n";
+        $body .= "DADOS DO VENDEDOR\n";
+        $body .= "========================================\n";
+        $body .= "Vendedor: {$vendedor}\n";
+        $body .= "Telefone Vendedor: " . (isset($data['vendedor_telefone']) ? $data['vendedor_telefone'] : 'N/A') . "\n";
+        $body .= "Grupo: {$grupo}\n\n";
+
+        $body .= "========================================\n";
+        $body .= "DETALHES DA FALHA\n";
+        $body .= "========================================\n";
+        $body .= "Erro: {$erro}\n";
+        $body .= "Tentativas: " . (isset($webhook['attempts']) ? $webhook['attempts'] : 'N/A') . "\n";
+        $body .= "Última tentativa: " . (isset($webhook['last_attempt']) ? $webhook['last_attempt'] : 'N/A') . "\n";
+        $body .= "Webhook URL: " . (isset($webhook['webhook_url']) ? $webhook['webhook_url'] : 'N/A') . "\n\n";
+
+        $body .= "========================================\n";
+        $body .= "DADOS COMPLETOS DO WEBHOOK (JSON)\n";
+        $body .= "========================================\n";
+        $body .= json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "\n\n";
+
+        $body .= "---\n";
+        $body .= "Este lead precisa ser registrado manualmente.\n";
+        $body .= "Email enviado automaticamente pelo sistema de retry do Formulário Hapvida.\n";
+
+        $headers = array('Content-Type: text/plain; charset=UTF-8');
+
+        $sent = wp_mail($to, $subject, $body, $headers);
+
+        if ($sent) {
+            error_log("HAPVIDA RETRY: Email de alerta enviado para {$to} - Lead {$lead_id}");
+        } else {
+            error_log("HAPVIDA RETRY: FALHA ao enviar email de alerta para {$to} - Lead {$lead_id}");
         }
     }
 
