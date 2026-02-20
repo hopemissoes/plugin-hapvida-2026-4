@@ -2,15 +2,13 @@
 /**
  * Sistema de Retry Automático de Webhooks em Background
  *
- * Este cron roda a cada 5 minutos e reprocessa webhooks que falharam
- * nas tentativas imediatas. Implementa backoff progressivo:
- * - Tentativa 1: 5 minutos após falha
- * - Tentativa 2: 15 minutos
- * - Tentativa 3: 30 minutos
- * - Tentativa 4: 1 hora
- * - Tentativa 5: 2 horas
+ * Este cron roda a cada 2 minutos e reprocessa webhooks que falharam
+ * nas tentativas imediatas. Retry rápido:
+ * - Tentativa 1: 2 minutos após falha
+ * - Tentativa 2: 5 minutos
+ * - Tentativa 3: 10 minutos
  *
- * Só envia email de "Lead PERDIDO" após esgotar TODAS as tentativas.
+ * Resolve em no máximo 10 minutos (falhas de DNS são breves).
  */
 
 if (!defined('ABSPATH')) {
@@ -20,7 +18,7 @@ if (!defined('ABSPATH')) {
 class Formulario_Hapvida_Webhook_Retry {
 
     const CRON_HOOK = 'formulario_hapvida_retry_webhooks';
-    const CRON_INTERVAL = 'hapvida_five_minutes';
+    const CRON_INTERVAL = 'hapvida_two_minutes';
     const MAX_PROCESS_PER_RUN = 10;
 
     private $failed_webhooks_option = 'formulario_hapvida_failed_webhooks';
@@ -47,13 +45,13 @@ class Formulario_Hapvida_Webhook_Retry {
     }
 
     /**
-     * Adiciona intervalo de 5 minutos ao WP Cron
+     * Adiciona intervalo de 2 minutos ao WP Cron
      */
     public function add_cron_interval($schedules) {
         if (!isset($schedules[self::CRON_INTERVAL])) {
             $schedules[self::CRON_INTERVAL] = array(
-                'interval' => 300, // 5 minutos
-                'display' => 'A cada 5 minutos (Webhook Retry)'
+                'interval' => 120, // 2 minutos
+                'display' => 'A cada 2 minutos (Webhook Retry)'
             );
         }
         return $schedules;
@@ -65,7 +63,7 @@ class Formulario_Hapvida_Webhook_Retry {
     public function schedule_retry_cron() {
         if (!wp_next_scheduled(self::CRON_HOOK)) {
             wp_schedule_event(time(), self::CRON_INTERVAL, self::CRON_HOOK);
-            $this->log("Cron de retry agendado - a cada 5 minutos");
+            $this->log("Cron de retry agendado - a cada 2 minutos");
         }
     }
 
@@ -110,8 +108,8 @@ class Formulario_Hapvida_Webhook_Retry {
             if ($attempts >= $max_attempts) {
                 // Esgotou todas as tentativas - marca como falha permanente
                 $webhook['status'] = 'permanent_failure';
-                $total_attempts = $attempts + 3; // 3 imediatas + N background
-                $webhook['error'] = "Esgotou todas as {$total_attempts} tentativas (3 imediatas + {$attempts} background)";
+                $total_attempts = $attempts + 2; // 2 imediatas + N background
+                $webhook['error'] = "Esgotou todas as {$total_attempts} tentativas (2 imediatas + {$attempts} background)";
                 $has_changes = true;
 
                 $nome = isset($webhook['data']['nome']) ? $webhook['data']['nome'] : 'N/A';
@@ -163,7 +161,7 @@ class Formulario_Hapvida_Webhook_Retry {
 
             } else {
                 // Falhou - calcula próximo retry
-                $retry_schedule = isset($webhook['retry_schedule']) ? $webhook['retry_schedule'] : array(5, 15, 30, 60, 120);
+                $retry_schedule = isset($webhook['retry_schedule']) ? $webhook['retry_schedule'] : array(2, 5, 10);
                 $next_interval_index = min($attempt_num, count($retry_schedule) - 1);
                 $next_interval = $retry_schedule[$next_interval_index];
 

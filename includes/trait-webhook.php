@@ -12,9 +12,9 @@ trait WebhookTrait {
             // Garante que sempre tem um ID único
             $webhook_id = 'webhook_' . time() . '_' . wp_rand(1000, 9999);
 
-            // Schedule de retry progressivo: 5min, 15min, 30min, 1h, 2h (em minutos)
-            $retry_intervals = array(5, 15, 30, 60, 120);
-            $next_retry_minutes = isset($retry_intervals[0]) ? $retry_intervals[0] : 5;
+            // Schedule de retry: 2min, 5min, 10min (resolve em no maximo 10 minutos)
+            $retry_intervals = array(2, 5, 10);
+            $next_retry_minutes = isset($retry_intervals[0]) ? $retry_intervals[0] : 2;
 
             $entry = array(
                 'id' => $webhook_id,
@@ -22,7 +22,7 @@ trait WebhookTrait {
                 'data' => $webhook_data,
                 'status' => $status,
                 'attempts' => 0,
-                'max_attempts' => 5,
+                'max_attempts' => 3,
                 'created_at' => current_time('mysql'),
                 'last_attempt' => current_time('mysql'),
                 'error' => $error_message,

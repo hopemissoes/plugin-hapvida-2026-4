@@ -170,18 +170,15 @@ trait FormHandlerTrait {
                     error_log("HAPVIDA WEBHOOK: Iniciando envio para lead {$form_data['lead_id']} - grupo {$grupo}");
 
                     $webhook_body = json_encode($webhook_data);
-                    $max_tentativas = 3;
+                    $max_tentativas = 2;
                     $webhook_response = null;
                     $ultimo_erro = '';
 
                     for ($tentativa = 1; $tentativa <= $max_tentativas; $tentativa++) {
                         error_log("HAPVIDA WEBHOOK: Tentativa {$tentativa}/{$max_tentativas} para lead {$form_data['lead_id']}");
 
-                        // Timeout progressivo: 10s, 15s, 20s
-                        $timeout = 10 + (($tentativa - 1) * 5);
-
                         $webhook_config = array(
-                            'timeout' => $timeout,
+                            'timeout' => 7,
                             'blocking' => true,
                             'body' => $webhook_body,
                             'headers' => array(
@@ -200,8 +197,7 @@ trait FormHandlerTrait {
                             error_log("HAPVIDA WEBHOOK: ERRO tentativa {$tentativa} - {$ultimo_erro}");
 
                             if ($tentativa < $max_tentativas) {
-                                // Backoff exponencial: 2s, 4s
-                                sleep(pow(2, $tentativa));
+                                sleep(1);
                             }
                             continue;
                         }
@@ -225,7 +221,7 @@ trait FormHandlerTrait {
                         }
 
                         if ($tentativa < $max_tentativas) {
-                            sleep(pow(2, $tentativa));
+                            sleep(1);
                         }
                     }
 
@@ -242,7 +238,7 @@ trait FormHandlerTrait {
                             $webhook_url
                         );
 
-                        error_log("HAPVIDA WEBHOOK: Lead {$form_data['lead_id']} agendado para retry em background (proximo em 5 minutos)");
+                        error_log("HAPVIDA WEBHOOK: Lead {$form_data['lead_id']} agendado para retry em background (proximo em 2 minutos)");
                     }
 
                     // Registra entrega pendente para monitoramento via Evolution API
