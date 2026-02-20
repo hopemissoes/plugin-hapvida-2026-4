@@ -2,11 +2,13 @@
 /**
  * Sistema de Retry Automático de Webhooks em Background
  *
- * Este cron roda a cada 2 minutos e reprocessa webhooks que falharam
- * nas tentativas imediatas. Retry rápido:
+ * Fluxo: formulário tenta 1x rápido (5s). Se falhar, salva na fila.
+ * Este cron roda a cada 2 minutos e reprocessa os webhooks da fila.
+ *
+ * Schedule de retry:
  * - Tentativa 1: 2 minutos após falha
- * - Tentativa 2: 5 minutos
- * - Tentativa 3: 10 minutos
+ * - Tentativa 2: 5 minutos após falha
+ * - Tentativa 3: 10 minutos após falha
  *
  * Resolve em no máximo 10 minutos (falhas de DNS são breves).
  */
@@ -102,14 +104,14 @@ class Formulario_Hapvida_Webhook_Retry {
             }
 
             // Verifica se excedeu max_attempts
-            $max_attempts = isset($webhook['max_attempts']) ? intval($webhook['max_attempts']) : 5;
+            $max_attempts = isset($webhook['max_attempts']) ? intval($webhook['max_attempts']) : 3;
             $attempts = isset($webhook['attempts']) ? intval($webhook['attempts']) : 0;
 
             if ($attempts >= $max_attempts) {
                 // Esgotou todas as tentativas - marca como falha permanente
                 $webhook['status'] = 'permanent_failure';
-                $total_attempts = $attempts + 2; // 2 imediatas + N background
-                $webhook['error'] = "Esgotou todas as {$total_attempts} tentativas (2 imediatas + {$attempts} background)";
+                $total_attempts = $attempts + 1; // 1 imediata + N background
+                $webhook['error'] = "Esgotou todas as {$total_attempts} tentativas (1 imediata + {$attempts} background)";
                 $has_changes = true;
 
                 $nome = isset($webhook['data']['nome']) ? $webhook['data']['nome'] : 'N/A';
@@ -174,12 +176,12 @@ class Formulario_Hapvida_Webhook_Retry {
                 // Se essa era a última tentativa, marca como falha permanente
                 if ($attempt_num >= $max_attempts) {
                     $webhook['status'] = 'permanent_failure';
-                    $total_attempts = $attempt_num + 3; // 3 imediatas + N background
+                    $total_attempts = $attempt_num + 1; // 1 imediata + N background
 
                     $nome = isset($webhook['data']['nome']) ? $webhook['data']['nome'] : 'N/A';
                     $telefone = isset($webhook['data']['telefone']) ? $webhook['data']['telefone'] : 'N/A';
                     $vendedor = isset($webhook['data']['vendedor_nome']) ? $webhook['data']['vendedor_nome'] : 'N/A';
-                    error_log("HAPVIDA RETRY CRITICAL: Lead PERDIDO DEFINITIVAMENTE apos {$total_attempts} tentativas totais - Cliente: {$nome}, Tel: {$telefone}, Vendedor: {$vendedor}");
+                    error_log("HAPVIDA RETRY CRITICAL: Lead PERDIDO DEFINITIVAMENTE apos {$total_attempts} tentativas totais (1 imediata + {$attempt_num} background) - Cliente: {$nome}, Tel: {$telefone}, Vendedor: {$vendedor}");
                     $this->log("❌ FALHA PERMANENTE: Lead {$nome} ({$telefone}) perdido apos {$total_attempts} tentativas");
                 }
 
