@@ -58,9 +58,10 @@ class Formulario_Hapvida_Webhook_Cleanup {
         
         foreach ($failed_webhooks as $webhook) {
             $created_time = strtotime($webhook['created_at']);
-            
-            // Mantém webhooks criados nos últimos 7 dias OU que ainda estão pendentes
-            if ($created_time > $cutoff_time || $webhook['status'] === 'pending') {
+
+            // Mantém webhooks criados nos últimos 7 dias OU que ainda estão pendentes/aguardando retry
+            $is_active = in_array($webhook['status'], array('pending', 'pending_retry'));
+            if ($created_time > $cutoff_time || $is_active) {
                 $cleaned_webhooks[] = $webhook;
             } else {
                 $removed_count++;
@@ -86,13 +87,16 @@ class Formulario_Hapvida_Webhook_Cleanup {
         $stats = array(
             'total' => count($webhooks),
             'pending' => 0,
+            'pending_retry' => 0,
             'completed' => 0,
+            'sent' => 0,
             'failed' => 0,
+            'permanent_failure' => 0,
             'by_group' => array('drv' => 0, 'seu_souza' => 0)
         );
-        
+
         foreach ($webhooks as $webhook) {
-            if (isset($webhook['status'])) {
+            if (isset($webhook['status']) && isset($stats[$webhook['status']])) {
                 $stats[$webhook['status']]++;
             }
             
@@ -105,7 +109,8 @@ class Formulario_Hapvida_Webhook_Cleanup {
         }
         
         $this->log("Relatório pós-limpeza: Total={$stats['total']}, Pendentes={$stats['pending']}, " .
-                  "Completados={$stats['completed']}, Falharam={$stats['failed']}, " .
+                  "Aguardando Retry={$stats['pending_retry']}, Enviados={$stats['sent']}, " .
+                  "Falharam={$stats['failed']}, Falha Permanente={$stats['permanent_failure']}, " .
                   "DRV={$stats['by_group']['drv']}, Seu Souza={$stats['by_group']['seu_souza']}");
     }
 
@@ -129,8 +134,9 @@ class Formulario_Hapvida_Webhook_Cleanup {
         foreach ($failed_webhooks as $webhook) {
             $created_time = strtotime($webhook['created_at']);
             
-            // Mantém webhooks recentes OU pendentes (independente da data)
-            if ($created_time > $cutoff_time || $webhook['status'] === 'pending') {
+            // Mantém webhooks recentes OU pendentes/aguardando retry (independente da data)
+            $is_active = in_array($webhook['status'], array('pending', 'pending_retry'));
+            if ($created_time > $cutoff_time || $is_active) {
                 $cleaned_webhooks[] = $webhook;
             } else {
                 $removed_count++;
@@ -180,7 +186,7 @@ class Formulario_Hapvida_Webhook_Cleanup {
         
         $stats = array(
             'total' => count($failed_webhooks),
-            'by_status' => array('pending' => 0, 'completed' => 0, 'failed' => 0),
+            'by_status' => array('pending' => 0, 'pending_retry' => 0, 'completed' => 0, 'sent' => 0, 'failed' => 0, 'permanent_failure' => 0),
             'by_group' => array('drv' => 0, 'seu_souza' => 0),
             'by_age' => array(
                 'last_24h' => 0,
@@ -198,7 +204,7 @@ class Formulario_Hapvida_Webhook_Cleanup {
         
         foreach ($failed_webhooks as $webhook) {
             // Status
-            if (isset($webhook['status'])) {
+            if (isset($webhook['status']) && isset($stats['by_status'][$webhook['status']])) {
                 $stats['by_status'][$webhook['status']]++;
             }
             
@@ -274,8 +280,11 @@ class Formulario_Hapvida_Webhook_Cleanup {
         return array(
             'total_webhooks' => $stats['total'],
             'pending_webhooks' => $stats['by_status']['pending'],
+            'pending_retry_webhooks' => $stats['by_status']['pending_retry'],
             'completed_webhooks' => $stats['by_status']['completed'],
+            'sent_webhooks' => $stats['by_status']['sent'],
             'failed_webhooks' => $stats['by_status']['failed'],
+            'permanent_failure_webhooks' => $stats['by_status']['permanent_failure'],
             'drv_webhooks' => $stats['by_group']['drv'],
             'seu_souza_webhooks' => $stats['by_group']['seu_souza'],
             'recent_webhooks' => $stats['by_age']['last_24h'],

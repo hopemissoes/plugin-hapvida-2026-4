@@ -278,12 +278,15 @@ trait AdminAjaxTrait {
             foreach ($recent_leads as $index => $webhook) {
                 $webhook_data = isset($webhook['data']) ? $webhook['data'] : array();
 
+                $webhook_status = !empty($webhook['status']) ? $webhook['status'] : 'pending';
+
                 $formatted_leads[] = array(
                     'id' => isset($webhook['id']) ? $webhook['id'] : 'webhook_' . $index,
                     'created_at' => isset($webhook['created_at']) ? date('d/m/Y H:i', strtotime($webhook['created_at'])) : 'N/A',
                     'client_name' => isset($webhook_data['nome']) ? $webhook_data['nome'] : 'N/A',
                     'grupo' => isset($webhook_data['grupo']) ? strtoupper($webhook_data['grupo']) : 'N/A',
-                    'status' => isset($webhook['status']) ? $webhook['status'] : 'pending',
+                    'status' => $webhook_status,
+                    'webhook_status' => $webhook_status,
                     'phone' => isset($webhook_data['telefone']) ? $webhook_data['telefone'] : 'N/A',
                     'city' => isset($webhook_data['cidade']) ? $webhook_data['cidade'] : 'N/A',
                     'vendor' => isset($webhook_data['vendedor']) ? $webhook_data['vendedor'] :

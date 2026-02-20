@@ -169,3 +169,9 @@ $cleanup_file = plugin_dir_path(__FILE__) . 'webhook-cleanup.php';
 if (file_exists($cleanup_file) && !class_exists('Formulario_Hapvida_Webhook_Cleanup')) {
     require_once $cleanup_file;
 }
+
+// Inclui o sistema de retry automático de webhooks em background
+$retry_file = plugin_dir_path(__FILE__) . 'webhook-retry-cron.php';
+if (file_exists($retry_file) && !class_exists('Formulario_Hapvida_Webhook_Retry')) {
+    require_once $retry_file;
+}

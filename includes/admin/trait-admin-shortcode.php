@@ -818,12 +818,13 @@ trait AdminShortcodeTrait {
         echo '<th>Telefone</th>';
         echo '<th>Cidade</th>';
         echo '<th>Vendedor</th>';
+        echo '<th>Webhook</th>';
         echo '</tr>';
         echo '</thead>';
         echo '<tbody id="leads-table-body">';
 
         // Mensagem de carregamento
-        echo '<tr><td colspan="6" style="text-align: center;">Carregando leads...</td></tr>';
+        echo '<tr><td colspan="7" style="text-align: center;">Carregando leads...</td></tr>';
 
         echo '</tbody>';
         echo '</table>';

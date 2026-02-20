@@ -141,7 +141,7 @@ trait AdminScriptsTrait {
                         }
 
                         function initHapvida() {
-                            console.log('🚀 Hapvida System - Iniciando VERSÃO FIXA');
+                            console.log('🚀 Hapvida System - Iniciando VERSÃO 3.1 - COM BADGE WEBHOOK');
 
                             // Verifica jQuery
                             if (typeof jQuery === 'undefined') {
@@ -168,6 +168,24 @@ trait AdminScriptsTrait {
 
                                 console.log('📍 AJAX URL:', ajaxurl);
                                 console.log('📍 REST URL:', restUrl);
+
+                                // Função para gerar badge de status do webhook
+                                function getWebhookStatusBadge(status) {
+                                    if (!status || status === 'undefined' || status === 'null') {
+                                        status = 'pending';
+                                    }
+                                    var map = {
+                                        'sent':              { label: 'Enviado',    css: 'background:#d4edda;color:#155724;' },
+                                        'success':           { label: 'Enviado',    css: 'background:#d4edda;color:#155724;' },
+                                        'completed':         { label: 'Enviado',    css: 'background:#d4edda;color:#155724;' },
+                                        'pending_retry':     { label: 'Reenviando', css: 'background:#fff3cd;color:#856404;' },
+                                        'pending':           { label: 'Pendente',   css: 'background:#fff3cd;color:#856404;' },
+                                        'permanent_failure': { label: 'Falhou',     css: 'background:#f8d7da;color:#721c24;' },
+                                        'failed':            { label: 'Falhou',     css: 'background:#f8d7da;color:#721c24;' }
+                                    };
+                                    var info = map[status] || { label: 'Desconhecido', css: 'background:#e2e8f0;color:#475569;' };
+                                    return '<span style="padding:4px 10px;border-radius:20px;font-size:0.82em;font-weight:600;white-space:nowrap;' + info.css + '">' + info.label + '</span>';
+                                }
 
                                 // Função para criar modal
                                 function createModal() {
@@ -453,16 +471,20 @@ trait AdminScriptsTrait {
 
                                                 if (!leads || !Array.isArray(leads)) {
                                                     console.warn('⚠️ Dados não são um array:', leads);
-                                                    tbody.html('<tr><td colspan="6" style="text-align:center;">Nenhum lead encontrado</td></tr>');
+                                                    tbody.html('<tr><td colspan="7" style="text-align:center;">Nenhum lead encontrado</td></tr>');
                                                     isUpdating = false;
                                                     return;
                                                 }
 
                                                 if (leads.length === 0) {
-                                                    tbody.html('<tr><td colspan="6" style="text-align:center;">Nenhum lead registrado</td></tr>');
+                                                    tbody.html('<tr><td colspan="7" style="text-align:center;">Nenhum lead registrado</td></tr>');
                                                 } else {
                                                     leads.forEach(function (lead, index) {
                                                         console.log('Lead ' + (index + 1) + ':', lead);
+
+                                                        var rawStatus = lead.webhook_status || lead.status || 'pending';
+                                                        var webhookBadge = getWebhookStatusBadge(rawStatus);
+                                                        console.log('🏷️ Badge para lead ' + (index + 1) + ': status=' + rawStatus + ', badge=' + webhookBadge.substring(0, 60));
 
                                                         var row = `
                                         <tr class="webhook-row" data-webhook-id="${lead.id}" style="cursor:pointer;">
@@ -472,6 +494,7 @@ trait AdminScriptsTrait {
                                             <td>${lead.phone}</td>
                                             <td>${lead.city}</td>
                                             <td>${lead.vendor}</td>
+                                            <td>${webhookBadge}</td>
                                         </tr>`;
 
                                                         tbody.append(row);
@@ -492,7 +515,7 @@ trait AdminScriptsTrait {
                                                 response: xhr.responseText
                                             });
 
-                                            $('#leads-table-body').html('<tr><td colspan="6" style="text-align:center;color:#dc3545;">Erro ao carregar leads</td></tr>');
+                                            $('#leads-table-body').html('<tr><td colspan="7" style="text-align:center;color:#dc3545;">Erro ao carregar leads</td></tr>');
                                             isUpdating = false;
                                         },
                                         complete: function () {
@@ -532,10 +555,11 @@ trait AdminScriptsTrait {
                                                 tbody.empty();
                                                 var leads = response.data;
                                                 if (!leads || !Array.isArray(leads) || leads.length === 0) {
-                                                    tbody.html('<tr><td colspan="6" style="text-align:center;">Nenhum lead registrado</td></tr>');
+                                                    tbody.html('<tr><td colspan="7" style="text-align:center;">Nenhum lead registrado</td></tr>');
                                                 } else {
                                                     leads.forEach(function (lead) {
-                                                        tbody.append('<tr class="webhook-row" data-webhook-id="' + lead.id + '" style="cursor:pointer;"><td>' + lead.created_at + '</td><td style="color:#0054B8;font-weight:500;">' + lead.client_name + '</td><td><span style="padding:2px 8px;background:#e3f2fd;border-radius:3px;">' + lead.grupo + '</span></td><td>' + lead.phone + '</td><td>' + lead.city + '</td><td>' + lead.vendor + '</td></tr>');
+                                                        var badge = getWebhookStatusBadge(lead.webhook_status || lead.status || 'pending');
+                                                        tbody.append('<tr class="webhook-row" data-webhook-id="' + lead.id + '" style="cursor:pointer;"><td>' + lead.created_at + '</td><td style="color:#0054B8;font-weight:500;">' + lead.client_name + '</td><td><span style="padding:2px 8px;background:#e3f2fd;border-radius:3px;">' + lead.grupo + '</span></td><td>' + lead.phone + '</td><td>' + lead.city + '</td><td>' + lead.vendor + '</td><td>' + badge + '</td></tr>');
                                                     });
                                                 }
                                             }

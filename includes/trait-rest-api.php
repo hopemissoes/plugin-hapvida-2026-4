@@ -219,7 +219,8 @@ trait RestApiTrait {
                 'created_at' => date('d/m/Y H:i', strtotime($webhook['created_at'])),
                 'client_name' => $data['nome'] ?? 'N/A',
                 'grupo' => strtoupper($data['grupo'] ?? 'N/A'),
-                'status' => $webhook['status'] ?? 'pending',
+                'status' => !empty($webhook['status']) ? $webhook['status'] : 'pending',
+                'webhook_status' => !empty($webhook['status']) ? $webhook['status'] : 'pending',
                 'phone' => $data['telefone'] ?? 'N/A',
                 'city' => $data['cidade'] ?? 'N/A',
                 'vendor' => $data['vendedor'] ?? $data['atendente'] ?? 'N/A'
