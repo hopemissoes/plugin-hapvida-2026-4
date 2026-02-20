@@ -230,6 +230,82 @@ trait AdminAjaxTrait {
         }
     }
 
+    // Toggle todos vendedores Seu Souza (ativar/desativar)
+    public function ajax_toggle_seu_souza_all_frontend()
+    {
+        $new_status = isset($_POST['new_status']) ? sanitize_text_field($_POST['new_status']) : '';
+        if (!in_array($new_status, array('ativo', 'inativo'))) {
+            wp_send_json_error('Status inválido');
+            return;
+        }
+
+        $vendedores = get_option($this->vendedores_option, array('drv' => array(), 'seu_souza' => array()));
+        if (!isset($vendedores['seu_souza']) || !is_array($vendedores['seu_souza'])) {
+            wp_send_json_error('Grupo Seu Souza não encontrado');
+            return;
+        }
+
+        $changed = false;
+        foreach ($vendedores['seu_souza'] as &$v) {
+            if (is_array($v) && isset($v['status']) && $v['status'] !== $new_status) {
+                $v['status'] = $new_status;
+                $changed = true;
+            }
+        }
+        unset($v);
+
+        if ($changed) {
+            update_option($this->vendedores_option, $vendedores);
+        }
+
+        // Conta ativos/inativos
+        $ativos = 0;
+        $inativos = 0;
+        foreach ($vendedores['seu_souza'] as $v) {
+            if (isset($v['status']) && $v['status'] === 'ativo') {
+                $ativos++;
+            } else {
+                $inativos++;
+            }
+        }
+
+        wp_send_json_success(array(
+            'message' => 'Vendedores Seu Souza atualizados',
+            'ativos' => $ativos,
+            'inativos' => $inativos
+        ));
+    }
+
+    // Status atual dos vendedores Seu Souza (para auto-refresh)
+    public function ajax_get_seu_souza_status_frontend()
+    {
+        $vendedores = get_option($this->vendedores_option, array('drv' => array(), 'seu_souza' => array()));
+        $seu_souza = isset($vendedores['seu_souza']) ? $vendedores['seu_souza'] : array();
+
+        $ativos = 0;
+        $inativos = 0;
+        foreach ($seu_souza as $v) {
+            if (isset($v['status']) && $v['status'] === 'ativo') {
+                $ativos++;
+            } else {
+                $inativos++;
+            }
+        }
+
+        $today = current_time('Y-m-d');
+        $daily_submissions = get_option($this->daily_submissions_option, array());
+        $daily_count = isset($daily_submissions[$today]) ? intval($daily_submissions[$today]) : 0;
+
+        $auto_activate = get_option('hapvida_auto_activate_seu_souza', false);
+
+        wp_send_json_success(array(
+            'ativos' => $ativos,
+            'inativos' => $inativos,
+            'daily_count' => $daily_count,
+            'auto_activate' => $auto_activate
+        ));
+    }
+
     // FUNÇÃO PARA CONTAGEM EM TEMPO REAL
     public function ajax_get_live_counts()
     {

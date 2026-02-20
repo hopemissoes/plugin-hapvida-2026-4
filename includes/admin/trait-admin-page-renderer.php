@@ -625,6 +625,28 @@ trait AdminPageRendererTrait {
                                         </div>
                                     </div>
 
+                                    <!-- LIMITE DIÁRIO PARA DESATIVAÇÃO AUTOMÁTICA SEU SOUZA -->
+                                    <?php $limite_diario = get_option('hapvida_seu_souza_limite_diario', 30); ?>
+                                    <div class="hapvida-auto-activate-box" style="margin-top: 15px;">
+                                        <div class="hapvida-auto-activate-info">
+                                            <h3 class="hapvida-auto-activate-title">
+                                                <span class="dashicons dashicons-warning"></span>
+                                                Limite Diário - Desativação Seu Souza
+                                            </h3>
+                                            <p class="hapvida-auto-activate-desc">
+                                                Quando a contagem diária de submissões atingir este limite, os vendedores do grupo <strong>Seu Souza</strong> serão <strong>desativados automaticamente</strong>.<br>
+                                                Valor atual: <strong id="limite-diario-display"><?php echo intval($limite_diario); ?></strong> submissões.
+                                            </p>
+                                        </div>
+                                        <div style="display: flex; align-items: center; gap: 10px;">
+                                            <input type="number" id="hapvida-limite-diario" value="<?php echo intval($limite_diario); ?>" min="1" max="999" style="width: 80px; padding: 8px 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 16px; font-weight: 700; text-align: center;">
+                                            <button type="button" id="salvar-limite-diario" class="button button-primary" style="border-radius: 8px;">
+                                                Salvar Limite
+                                            </button>
+                                            <span id="limite-diario-feedback" style="display: none; color: #16a34a; font-weight: 600;"></span>
+                                        </div>
+                                    </div>
+
                                     <script>
                                     (function($) {
                                         $('#auto-activate-seu-souza-toggle').on('change', function() {
@@ -666,6 +688,45 @@ trait AdminPageRendererTrait {
                                                     $label.text(!enabled ? 'Ativado' : 'Desativado');
                                                     $label.css('color', !enabled ? '#0054B8' : '#999');
                                                     alert('Erro ao salvar. Tente novamente.');
+                                                }
+                                            });
+                                        });
+
+                                        // Salvar limite diário
+                                        $('#salvar-limite-diario').on('click', function() {
+                                            var $btn = $(this);
+                                            var limite = parseInt($('#hapvida-limite-diario').val());
+                                            var $feedback = $('#limite-diario-feedback');
+
+                                            if (isNaN(limite) || limite < 1) {
+                                                alert('Digite um valor válido (mínimo 1).');
+                                                return;
+                                            }
+
+                                            $btn.prop('disabled', true).text('Salvando...');
+
+                                            $.ajax({
+                                                url: ajaxurl,
+                                                method: 'POST',
+                                                data: {
+                                                    action: 'hapvida_save_limite_diario_seu_souza',
+                                                    security: $('#vendedores_nonce').val() || $('input[name="vendedores_nonce"]').val(),
+                                                    limite: limite
+                                                },
+                                                success: function(response) {
+                                                    if (response.success) {
+                                                        $('#limite-diario-display').text(limite);
+                                                        $feedback.text('Salvo!').show();
+                                                        setTimeout(function() { $feedback.fadeOut(); }, 2000);
+                                                    } else {
+                                                        alert('Erro ao salvar: ' + (response.data || 'Erro desconhecido'));
+                                                    }
+                                                },
+                                                error: function() {
+                                                    alert('Erro ao salvar. Tente novamente.');
+                                                },
+                                                complete: function() {
+                                                    $btn.prop('disabled', false).text('Salvar Limite');
                                                 }
                                             });
                                         });

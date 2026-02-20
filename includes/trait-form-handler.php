@@ -116,6 +116,9 @@ trait FormHandlerTrait {
             $this->update_submission_counts();
             //$this->update_ultimo_vendedor($vendedor);
 
+            // Verifica se a contagem diária atingiu o limite para desativar Seu Souza
+            $this->check_daily_limit_deactivate_seu_souza();
+
             // *** WEBHOOK: 1 tentativa rápida, se falhar vai pro cron ***
             $options = get_option($this->settings_option_name);
             $is_business_hours = $this->is_horario_comercial();

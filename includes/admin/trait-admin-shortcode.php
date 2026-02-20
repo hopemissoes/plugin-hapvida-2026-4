@@ -97,6 +97,11 @@ trait AdminShortcodeTrait {
                 <?php $this->render_delivery_tracking_frontend(); ?>
             </div>
 
+            <!-- SEÇÃO: CONTROLE SEU SOUZA -->
+            <div class="dashboard-section seu-souza-control-section">
+                <?php $this->render_seu_souza_control_frontend(); ?>
+            </div>
+
             <!-- ⭐ NOVA SEÇÃO: GERENCIAMENTO DE VENDEDORES -->
             <div class="dashboard-section vendors-management-section">
                 <?php $this->render_vendors_management_frontend(); ?>

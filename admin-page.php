@@ -100,6 +100,13 @@ class Formulario_Hapvida_Admin
         add_action('wp_ajax_get_vendors_list_frontend', array($this, 'ajax_get_vendors_list_frontend'));
         add_action('wp_ajax_nopriv_get_vendors_list_frontend', array($this, 'ajax_get_vendors_list_frontend'));
 
+        // Seu Souza: ativar/desativar todos + status
+        add_action('wp_ajax_toggle_seu_souza_all_frontend', array($this, 'ajax_toggle_seu_souza_all_frontend'));
+        add_action('wp_ajax_nopriv_toggle_seu_souza_all_frontend', array($this, 'ajax_toggle_seu_souza_all_frontend'));
+
+        add_action('wp_ajax_get_seu_souza_status_frontend', array($this, 'ajax_get_seu_souza_status_frontend'));
+        add_action('wp_ajax_nopriv_get_seu_souza_status_frontend', array($this, 'ajax_get_seu_souza_status_frontend'));
+
         add_action('wp_ajax_get_delivery_stats', array($this, 'ajax_get_delivery_stats'));
         add_action('wp_ajax_nopriv_get_delivery_stats', array($this, 'ajax_get_delivery_stats'));
 

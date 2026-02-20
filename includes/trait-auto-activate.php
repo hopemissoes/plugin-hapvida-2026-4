@@ -138,4 +138,59 @@ trait AutoActivateTrait {
             'enabled' => $enabled
         ));
     }
+
+    public function ajax_save_limite_diario_seu_souza()
+    {
+        check_ajax_referer('save_vendedores', 'security');
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Permissão negada');
+        }
+
+        $limite = isset($_POST['limite']) ? intval($_POST['limite']) : 30;
+        if ($limite < 1) {
+            $limite = 30;
+        }
+
+        update_option('hapvida_seu_souza_limite_diario', $limite);
+
+        wp_send_json_success(array(
+            'message' => "Limite diário atualizado para {$limite}",
+            'limite' => $limite
+        ));
+    }
+
+    /**
+     * Verifica se a contagem diária atingiu o limite e desativa vendedores Seu Souza.
+     * Chamado após cada submissão de formulário.
+     */
+    public function check_daily_limit_deactivate_seu_souza()
+    {
+        $limite = intval(get_option('hapvida_seu_souza_limite_diario', 30));
+        if ($limite < 1) return;
+
+        $today = current_time('Y-m-d');
+        $daily_submissions = get_option('formulario_hapvida_daily_submissions', array());
+        $daily_count = isset($daily_submissions[$today]) ? intval($daily_submissions[$today]) : 0;
+
+        if ($daily_count >= $limite) {
+            $vendedores = get_option('formulario_hapvida_vendedores', array('drv' => array(), 'seu_souza' => array()));
+            if (!isset($vendedores['seu_souza']) || !is_array($vendedores['seu_souza'])) return;
+
+            $changed = false;
+            $count = 0;
+            foreach ($vendedores['seu_souza'] as &$v) {
+                if (is_array($v) && isset($v['status']) && $v['status'] === 'ativo') {
+                    $v['status'] = 'inativo';
+                    $changed = true;
+                    $count++;
+                }
+            }
+            unset($v);
+
+            if ($changed) {
+                update_option('formulario_hapvida_vendedores', $vendedores);
+                error_log("HAPVIDA LIMITE DIÁRIO: {$count} vendedor(es) Seu Souza DESATIVADOS (contagem diária {$daily_count} >= limite {$limite})");
+            }
+        }
+    }
 }
