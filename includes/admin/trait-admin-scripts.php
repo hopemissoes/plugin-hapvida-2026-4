@@ -141,7 +141,7 @@ trait AdminScriptsTrait {
                         }
 
                         function initHapvida() {
-                            console.log('🚀 Hapvida System - Iniciando VERSÃO FIXA');
+                            console.log('🚀 Hapvida System - Iniciando VERSÃO 3.1 - COM BADGE WEBHOOK');
 
                             // Verifica jQuery
                             if (typeof jQuery === 'undefined') {
@@ -482,7 +482,9 @@ trait AdminScriptsTrait {
                                                     leads.forEach(function (lead, index) {
                                                         console.log('Lead ' + (index + 1) + ':', lead);
 
-                                                        var webhookBadge = getWebhookStatusBadge(lead.webhook_status || lead.status || 'pending');
+                                                        var rawStatus = lead.webhook_status || lead.status || 'pending';
+                                                        var webhookBadge = getWebhookStatusBadge(rawStatus);
+                                                        console.log('🏷️ Badge para lead ' + (index + 1) + ': status=' + rawStatus + ', badge=' + webhookBadge.substring(0, 60));
 
                                                         var row = `
                                         <tr class="webhook-row" data-webhook-id="${lead.id}" style="cursor:pointer;">
