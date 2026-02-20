@@ -278,7 +278,7 @@ trait AdminAjaxTrait {
             foreach ($recent_leads as $index => $webhook) {
                 $webhook_data = isset($webhook['data']) ? $webhook['data'] : array();
 
-                $webhook_status = isset($webhook['status']) ? $webhook['status'] : 'pending';
+                $webhook_status = !empty($webhook['status']) ? $webhook['status'] : 'pending';
 
                 $formatted_leads[] = array(
                     'id' => isset($webhook['id']) ? $webhook['id'] : 'webhook_' . $index,

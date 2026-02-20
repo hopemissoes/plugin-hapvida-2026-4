@@ -171,6 +171,9 @@ trait AdminScriptsTrait {
 
                                 // Função para gerar badge de status do webhook
                                 function getWebhookStatusBadge(status) {
+                                    if (!status || status === 'undefined' || status === 'null') {
+                                        status = 'pending';
+                                    }
                                     var map = {
                                         'sent':              { label: 'Enviado',    css: 'background:#d4edda;color:#155724;' },
                                         'success':           { label: 'Enviado',    css: 'background:#d4edda;color:#155724;' },
@@ -180,7 +183,7 @@ trait AdminScriptsTrait {
                                         'permanent_failure': { label: 'Falhou',     css: 'background:#f8d7da;color:#721c24;' },
                                         'failed':            { label: 'Falhou',     css: 'background:#f8d7da;color:#721c24;' }
                                     };
-                                    var info = map[status] || { label: status, css: 'background:#e2e8f0;color:#475569;' };
+                                    var info = map[status] || { label: 'Desconhecido', css: 'background:#e2e8f0;color:#475569;' };
                                     return '<span style="padding:4px 10px;border-radius:20px;font-size:0.82em;font-weight:600;white-space:nowrap;' + info.css + '">' + info.label + '</span>';
                                 }
 
