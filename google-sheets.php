@@ -812,21 +812,34 @@ class Formulario_Hapvida_Google_Sheets
             return array('success' => false, 'message' => 'A planilha de "' . $vendor_name . '" nao possui nenhuma aba.');
         }
 
-        // Encontrar a primeira e a ultima aba (menor e maior index)
+        // Encontrar a primeira aba (menor index) e a aba do mes mais recente
         $first_sheet = null;
         $min_index = PHP_INT_MAX;
         $last_sheet = null;
-        $max_index = -1;
+        $latest_date = 0;
         foreach ($existing_sheets as $s) {
             $idx = isset($s['properties']['index']) ? (int) $s['properties']['index'] : 0;
-            if ($idx > $max_index) {
-                $max_index = $idx;
-                $last_sheet = $s['properties'];
-            }
+            $title = isset($s['properties']['title']) ? trim($s['properties']['title']) : '';
+
+            // Primeira aba = menor index
             if ($idx < $min_index) {
                 $min_index = $idx;
                 $first_sheet = $s['properties'];
             }
+
+            // Aba mais recente = parsear MM/YY como data e pegar a maior
+            if (preg_match('/^(\d{2})\/(\d{2})$/', $title, $m)) {
+                $date_val = ((int) $m[2]) * 100 + ((int) $m[1]); // YYMM como numero para comparacao
+                if ($date_val > $latest_date) {
+                    $latest_date = $date_val;
+                    $last_sheet = $s['properties'];
+                }
+            }
+        }
+
+        // Fallback: se nenhuma aba tem formato MM/YY, usa a de menor index
+        if (!$last_sheet) {
+            $last_sheet = $first_sheet;
         }
 
         if (!$last_sheet) {
@@ -835,7 +848,7 @@ class Formulario_Hapvida_Google_Sheets
 
         $last_title = $last_sheet['title'];
         $last_sheet_id = (int) $last_sheet['sheetId'];
-        error_log('[Sheets Update] Ultima aba: "' . $last_title . '" (sheetId: ' . $last_sheet_id . ', index: ' . $max_index . ')');
+        error_log('[Sheets Update] Aba mais recente: "' . $last_title . '" (sheetId: ' . $last_sheet_id . ')');
 
         // Calcular proximo mes a partir do nome da ultima aba (formato MM/YY)
         $next_tab_name = $this->calculate_next_month($last_title);
