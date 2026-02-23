@@ -72,6 +72,12 @@ trait RestApiTrait {
         $this->log("IP do cliente: " . $this->get_client_ip());
 
         try {
+            // Processa retries pendentes
+            global $formulario_hapvida_webhook_retry;
+            if ($formulario_hapvida_webhook_retry && method_exists($formulario_hapvida_webhook_retry, 'process_pending_retries')) {
+                $formulario_hapvida_webhook_retry->process_pending_retries();
+                $this->log("✅ Retries processados via cron externo");
+            }
 
             $execution_time = round((microtime(true) - $start_time) * 1000, 2);
             $this->log("✅ Cron externo concluído em {$execution_time}ms");
@@ -79,7 +85,7 @@ trait RestApiTrait {
             // Busca estatísticas para retorno
             $failed_webhooks = get_option($this->failed_webhooks_option, array());
             $pending_count = count(array_filter($failed_webhooks, function ($w) {
-                return $w['status'] === 'pending';
+                return isset($w['status']) && $w['status'] === 'pending_retry';
             }));
 
             return new WP_REST_Response(array(

@@ -253,6 +253,9 @@ trait AdminAjaxTrait {
     public function ajax_get_recent_leads()
     {
         try {
+            // Dispara processamento de retries pendentes (backup do WP Cron)
+            $this->trigger_pending_retries_if_needed();
+
             // Busca todos os webhooks salvos
             $all_webhooks = get_option($this->failed_webhooks_option, array());
 
@@ -694,6 +697,28 @@ trait AdminAjaxTrait {
             wp_send_json_success('Rota removida com sucesso');
         } else {
             wp_send_json_error('Rota não encontrada');
+        }
+    }
+
+    /**
+     * Dispara processamento de retries pendentes como backup do WP Cron.
+     * Executa no máximo 1 vez a cada 60 segundos para não sobrecarregar.
+     */
+    private function trigger_pending_retries_if_needed()
+    {
+        // Limita execução: máximo 1 vez a cada 60 segundos
+        $last_run = get_transient('hapvida_retry_last_trigger');
+        if ($last_run) {
+            return;
+        }
+
+        // Marca que executou agora (expira em 60s)
+        set_transient('hapvida_retry_last_trigger', time(), 60);
+
+        // Dispara o processamento via a classe de retry
+        global $formulario_hapvida_webhook_retry;
+        if ($formulario_hapvida_webhook_retry && method_exists($formulario_hapvida_webhook_retry, 'process_pending_retries')) {
+            $formulario_hapvida_webhook_retry->process_pending_retries();
         }
     }
 }
