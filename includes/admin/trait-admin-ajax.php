@@ -702,18 +702,18 @@ trait AdminAjaxTrait {
 
     /**
      * Dispara processamento de retries pendentes como backup do WP Cron.
-     * Executa no máximo 1 vez a cada 60 segundos para não sobrecarregar.
+     * Executa no máximo 1 vez a cada 5 minutos para não sobrecarregar.
      */
     private function trigger_pending_retries_if_needed()
     {
-        // Limita execução: máximo 1 vez a cada 60 segundos
+        // Limita execução: máximo 1 vez a cada 5 minutos
         $last_run = get_transient('hapvida_retry_last_trigger');
         if ($last_run) {
             return;
         }
 
-        // Marca que executou agora (expira em 60s)
-        set_transient('hapvida_retry_last_trigger', time(), 60);
+        // Marca que executou agora (expira em 300s = 5 minutos)
+        set_transient('hapvida_retry_last_trigger', time(), 300);
 
         // Dispara o processamento via a classe de retry
         global $formulario_hapvida_webhook_retry;
