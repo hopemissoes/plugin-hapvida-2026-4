@@ -30,14 +30,17 @@ class Formulario_Hapvida_Webhook_Retry {
     public function __construct() {
         $this->log_file = WP_CONTENT_DIR . '/formulario_hapvida.log';
 
-        // Registra intervalo de 5 minutos
+        // Registra intervalo customizado (caso WP Cron esteja ativo)
         add_filter('cron_schedules', array($this, 'add_cron_interval'));
 
-        // Registra o hook do cron
+        // Registra o hook do cron (caso WP Cron esteja ativo)
         add_action(self::CRON_HOOK, array($this, 'process_pending_retries'));
 
         // Agenda o cron se não estiver agendado
         add_action('init', array($this, 'schedule_retry_cron'));
+
+        // Fallback: dispara retries via init quando DISABLE_WP_CRON está ativo
+        add_action('init', array($this, 'maybe_process_retries_on_init'));
 
         // Hook de desativação
         register_deactivation_hook(
@@ -321,6 +324,44 @@ class Formulario_Hapvida_Webhook_Retry {
         $this->process_pending_retries();
 
         return $reset_count;
+    }
+
+    /**
+     * Fallback para quando DISABLE_WP_CRON está ativo.
+     * Roda a cada 2 minutos usando transient como controle de frequência.
+     * Funciona em qualquer visita ao site (não depende de WP Cron).
+     */
+    public function maybe_process_retries_on_init() {
+        // Só executa se DISABLE_WP_CRON estiver ativo
+        if (!defined('DISABLE_WP_CRON') || !DISABLE_WP_CRON) {
+            return;
+        }
+
+        // Controle de frequência: máximo 1 vez a cada 2 minutos
+        $last_run = get_transient('hapvida_retry_init_trigger');
+        if ($last_run) {
+            return;
+        }
+
+        // Verifica se existem webhooks pendentes antes de processar
+        $webhooks = get_option($this->failed_webhooks_option, array());
+        $has_pending = false;
+        foreach ($webhooks as $webhook) {
+            if (isset($webhook['status']) && $webhook['status'] === 'pending_retry') {
+                $has_pending = true;
+                break;
+            }
+        }
+
+        if (!$has_pending) {
+            return;
+        }
+
+        // Marca que executou (expira em 120s = 2 minutos)
+        set_transient('hapvida_retry_init_trigger', time(), 120);
+
+        $this->log("INIT TRIGGER: Processando retries (DISABLE_WP_CRON ativo)");
+        $this->process_pending_retries();
     }
 
     /**
