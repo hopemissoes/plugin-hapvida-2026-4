@@ -344,13 +344,8 @@ trait AdminAjaxTrait {
 
     public function ajax_adjust_submission_count()
     {
-        // CORREÇÃO: Torna nonce opcional para usuários não logados
-        if (is_user_logged_in()) {
-            if (!isset($_POST['security']) || !wp_verify_nonce($_POST['security'], 'adjust_daily_count_nonce')) {
-                wp_send_json_error('Nonce inválido');
-                return;
-            }
-        }
+        // Endpoint público (wp_ajax_nopriv) - nonce não verificado pois
+        // páginas cacheadas geram nonces expirados para usuários logados
 
         $adjustment = intval($_POST['adjustment']); // 1 ou -1
         $count_type = sanitize_text_field($_POST['count_type']); // 'daily' ou 'monthly'
@@ -398,13 +393,8 @@ trait AdminAjaxTrait {
 
     public function ajax_get_counts()
     {
-        // CORREÇÃO: Torna nonce opcional para usuários não logados
-        if (is_user_logged_in()) {
-            if (!isset($_POST['security']) || !wp_verify_nonce($_POST['security'], 'get_counts_nonce')) {
-                wp_send_json_error('Nonce inválido');
-                return;
-            }
-        }
+        // Endpoint público (wp_ajax_nopriv) - nonce não verificado pois
+        // páginas cacheadas geram nonces expirados para usuários logados
 
         $today = current_time('Y-m-d');
         $current_month = current_time('Y-m');
