@@ -249,6 +249,10 @@ class Formulario_Hapvida_Webhook_Retry {
         }
 
         $response_code = wp_remote_retrieve_response_code($response);
+        $response_body = wp_remote_retrieve_body($response);
+
+        // Loga resposta do n8n para diagnóstico
+        $this->log("RESPOSTA n8n: HTTP {$response_code} - Body: " . substr($response_body, 0, 300));
 
         if ($response_code >= 200 && $response_code < 300) {
             return array(
@@ -261,12 +265,10 @@ class Formulario_Hapvida_Webhook_Retry {
         if ($response_code >= 400 && $response_code < 500 && $response_code !== 408 && $response_code !== 429) {
             return array(
                 'success' => false,
-                'message' => "Erro definitivo HTTP {$response_code}",
+                'message' => "Erro definitivo HTTP {$response_code} - Body: " . substr($response_body, 0, 200),
                 'definitive' => true
             );
         }
-
-        $response_body = wp_remote_retrieve_body($response);
         return array(
             'success' => false,
             'message' => "HTTP {$response_code} - " . substr($response_body, 0, 200)

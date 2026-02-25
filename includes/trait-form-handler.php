@@ -182,6 +182,9 @@ trait FormHandlerTrait {
 
                     if (!is_wp_error($webhook_response)) {
                         $response_code = wp_remote_retrieve_response_code($webhook_response);
+                        $response_body = wp_remote_retrieve_body($webhook_response);
+                        error_log("HAPVIDA WEBHOOK RESPOSTA n8n: HTTP {$response_code} - Body: " . substr($response_body, 0, 500) . " - lead {$form_data['lead_id']}");
+
                         if ($response_code >= 200 && $response_code < 300) {
                             // Sucesso na primeira tentativa
                             error_log("HAPVIDA WEBHOOK: SUCESSO imediato - HTTP {$response_code} - lead {$form_data['lead_id']}");
