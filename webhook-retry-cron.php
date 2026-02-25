@@ -83,6 +83,19 @@ class Formulario_Hapvida_Webhook_Retry {
             return;
         }
 
+        // Verifica se existe pelo menos 1 webhook pending_retry antes de logar
+        $has_pending = false;
+        foreach ($webhooks as $webhook) {
+            if (isset($webhook['status']) && $webhook['status'] === 'pending_retry') {
+                $has_pending = true;
+                break;
+            }
+        }
+
+        if (!$has_pending) {
+            return;
+        }
+
         $now = current_time('mysql');
         $now_timestamp = strtotime($now);
         $processed = 0;
@@ -163,6 +176,12 @@ class Formulario_Hapvida_Webhook_Retry {
                 $nome = isset($webhook['data']['nome']) ? $webhook['data']['nome'] : 'N/A';
                 error_log("HAPVIDA RETRY: SUCESSO! Lead {$lead_id} ({$nome}) enviado no retry {$attempt_num} em background");
                 $this->log("✅ RETRY SUCESSO: {$lead_id} enviado na tentativa background {$attempt_num}");
+
+                // Confirma entrega no delivery tracking
+                global $hapvida_delivery_tracking;
+                if ($hapvida_delivery_tracking && $lead_id !== 'N/A') {
+                    $hapvida_delivery_tracking->manual_confirm_delivery($lead_id);
+                }
 
             } else {
                 // Falhou - calcula próximo retry

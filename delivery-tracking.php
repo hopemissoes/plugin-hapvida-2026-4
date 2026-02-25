@@ -664,6 +664,15 @@ class Hapvida_Delivery_Tracking
 
     /**
      * Normaliza um telefone removendo caracteres não numéricos
+     * Público para permitir uso externo (ex: confirm_delivery no form handler)
+     */
+    public function normalize_phone_public($phone)
+    {
+        return $this->normalize_phone($phone);
+    }
+
+    /**
+     * Normaliza um telefone removendo caracteres não numéricos
      */
     private function normalize_phone($phone)
     {
