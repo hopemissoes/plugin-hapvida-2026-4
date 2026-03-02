@@ -52,6 +52,9 @@ class Hapvida_Delivery_Tracking
         if (!wp_next_scheduled(self::CRON_HOOK)) {
             wp_schedule_event(time(), self::CRON_INTERVAL, self::CRON_HOOK);
         }
+
+        // Fallback: dispara verificação via init quando DISABLE_WP_CRON está ativo
+        add_action('init', array($this, 'maybe_check_deliveries_on_init'));
     }
 
     /**
@@ -66,6 +69,43 @@ class Hapvida_Delivery_Tracking
             );
         }
         return $schedules;
+    }
+
+    /**
+     * Fallback para quando DISABLE_WP_CRON está ativo.
+     * Verifica entregas expiradas a cada 10 minutos via init hook.
+     */
+    public function maybe_check_deliveries_on_init()
+    {
+        if (!defined('DISABLE_WP_CRON') || !DISABLE_WP_CRON) {
+            return;
+        }
+
+        // Controle de frequência: máximo 1 vez a cada 10 minutos
+        $last_run = get_transient('hapvida_delivery_init_trigger');
+        if ($last_run) {
+            return;
+        }
+
+        // Verifica se existem entregas pendentes antes de processar
+        $pending = get_option(self::OPTION_PENDING, array());
+        $has_pending = false;
+        foreach ($pending as $delivery) {
+            if ($delivery['status'] === 'pendente') {
+                $has_pending = true;
+                break;
+            }
+        }
+
+        if (!$has_pending) {
+            return;
+        }
+
+        // Marca que executou (expira em 600s = 10 minutos)
+        set_transient('hapvida_delivery_init_trigger', time(), 600);
+
+        error_log("HAPVIDA DELIVERY: INIT TRIGGER - Verificando entregas expiradas (DISABLE_WP_CRON ativo)");
+        $this->check_expired_deliveries();
     }
 
     /**

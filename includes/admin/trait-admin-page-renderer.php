@@ -3,6 +3,88 @@ if (!defined('ABSPATH')) exit;
 
 trait AdminPageRendererTrait {
 
+    /**
+     * Renderiza tabela de vendedores ativos na aba Vendedores
+     */
+    private function render_active_vendors_table()
+    {
+        $vendedores = get_option($this->vendedores_option, array());
+
+        $ativos = array();
+        $inativos_count = 0;
+
+        foreach ($vendedores as $grupo => $grupo_vendedores) {
+            if (!is_array($grupo_vendedores)) continue;
+            foreach ($grupo_vendedores as $vendedor) {
+                $status = isset($vendedor['status']) ? $vendedor['status'] : 'ativo';
+                if ($status === 'ativo') {
+                    $ativos[] = array(
+                        'nome' => $vendedor['nome'],
+                        'telefone' => $vendedor['telefone'],
+                        'grupo' => $grupo,
+                        'categoria' => isset($vendedor['categoria']) ? $vendedor['categoria'] : 'fixo',
+                    );
+                } else {
+                    $inativos_count++;
+                }
+            }
+        }
+
+        $total_ativos = count($ativos);
+        ?>
+        <div style="display: flex; gap: 12px; margin-bottom: 16px;">
+            <div style="display: flex; align-items: center; gap: 6px; background: #f0fdf4; border: 1px solid #bbf7d0; padding: 8px 14px; border-radius: 8px;">
+                <span style="width: 8px; height: 8px; border-radius: 50%; background: #22c55e; display: inline-block;"></span>
+                <strong style="font-size: 18px; color: #166534;"><?php echo $total_ativos; ?></strong>
+                <span style="font-size: 13px; color: #166534;">Ativos</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px; background: #fef2f2; border: 1px solid #fecaca; padding: 8px 14px; border-radius: 8px;">
+                <span style="width: 8px; height: 8px; border-radius: 50%; background: #ef4444; display: inline-block;"></span>
+                <strong style="font-size: 18px; color: #991b1b;"><?php echo $inativos_count; ?></strong>
+                <span style="font-size: 13px; color: #991b1b;">Inativos</span>
+            </div>
+        </div>
+
+        <?php if ($total_ativos > 0): ?>
+        <table class="widefat striped" style="font-size: 13px;">
+            <thead>
+                <tr>
+                    <th style="width: 30px;">#</th>
+                    <th>Nome</th>
+                    <th>Telefone</th>
+                    <th>Grupo</th>
+                    <th>Categoria</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php
+                $i = 1;
+                foreach ($ativos as $v): ?>
+                <tr>
+                    <td style="color: #94a3b8;"><?php echo $i++; ?></td>
+                    <td><strong><?php echo esc_html($v['nome']); ?></strong></td>
+                    <td><code><?php echo esc_html($v['telefone']); ?></code></td>
+                    <td>
+                        <span style="background: <?php echo $v['grupo'] === 'drv' ? '#dbeafe' : '#fff7ed'; ?>; color: <?php echo $v['grupo'] === 'drv' ? '#1e40af' : '#9a3412'; ?>; padding: 2px 10px; border-radius: 4px; font-size: 11px; font-weight: 600;">
+                            <?php echo esc_html(strtoupper(str_replace('_', ' ', $v['grupo']))); ?>
+                        </span>
+                    </td>
+                    <td>
+                        <span style="background: <?php echo $v['categoria'] === 'fixo' ? '#f1f5f9' : '#faf5ff'; ?>; color: <?php echo $v['categoria'] === 'fixo' ? '#475569' : '#7c3aed'; ?>; padding: 2px 8px; border-radius: 4px; font-size: 11px;">
+                            <?php echo esc_html(ucfirst($v['categoria'])); ?>
+                        </span>
+                    </td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+        <?php else: ?>
+            <div class="hapvida-alert" style="background: #fef3c7; border: 1px solid #fde68a; color: #92400e; padding: 12px 16px; border-radius: 8px;">
+                <strong>Nenhum vendedor ativo.</strong> Verifique o gerenciamento de vendedores abaixo.
+            </div>
+        <?php endif;
+    }
+
     // Backend leads section
     private function render_all_leads_section()
     {
@@ -589,6 +671,17 @@ trait AdminPageRendererTrait {
 
                 <!-- TAB: VENDEDORES -->
                 <div class="hapvida-tab-panel" data-tab="vendedores">
+
+                <!-- TABELA DE VENDEDORES ATIVOS -->
+                <div class="hapvida-row">
+                    <div class="hapvida-column full-width">
+                        <div class="hapvida-card">
+                            <h2><i class="dashicons dashicons-groups"></i> Vendedores Ativos</h2>
+                            <?php $this->render_active_vendors_table(); ?>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="hapvida-row">
                     <div class="hapvida-column full-width">
                         <div class="hapvida-card">

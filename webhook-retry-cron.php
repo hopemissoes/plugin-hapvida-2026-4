@@ -177,11 +177,7 @@ class Formulario_Hapvida_Webhook_Retry {
                 error_log("HAPVIDA RETRY: SUCESSO! Lead {$lead_id} ({$nome}) enviado no retry {$attempt_num} em background");
                 $this->log("✅ RETRY SUCESSO: {$lead_id} enviado na tentativa background {$attempt_num}");
 
-                // Confirma entrega no delivery tracking
-                global $hapvida_delivery_tracking;
-                if ($hapvida_delivery_tracking && $lead_id !== 'N/A') {
-                    $hapvida_delivery_tracking->manual_confirm_delivery($lead_id);
-                }
+                // NÃO auto-confirma entrega - a confirmação real vem da Evolution API
 
             } else {
                 // Falhou - calcula próximo retry

@@ -202,19 +202,13 @@ trait FormHandlerTrait {
                     }
 
                     // Registra entrega pendente para monitoramento
+                    // NÃO auto-confirma no HTTP 200 - a confirmação vem da Evolution API
+                    // via webhook ou pelo timeout do cron (2h sem confirmação = desativa vendedor)
                     global $hapvida_delivery_tracking;
                     if ($hapvida_delivery_tracking) {
                         $vendedor['grupo'] = $grupo;
                         $lead_id = isset($form_data['lead_id']) ? $form_data['lead_id'] : uniqid('lead_');
                         $hapvida_delivery_tracking->register_pending_delivery($vendedor, $lead_id);
-
-                        // Se o webhook enviou com sucesso, confirma a entrega automaticamente
-                        if ($webhook_success) {
-                            $hapvida_delivery_tracking->confirm_delivery(
-                                $hapvida_delivery_tracking->normalize_phone_public($vendedor['telefone']),
-                                $lead_id
-                            );
-                        }
                     }
 
                 } else {
