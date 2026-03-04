@@ -416,8 +416,8 @@ trait AdminDrvManagerTrait {
 
             function validatePhone(value) {
                 var clean = value.replace(/\D/g, '');
-                // Deve ter entre 12 e 13 dígitos e começar com 55
-                return clean.length >= 12 && clean.length <= 13 && clean.substring(0, 2) === '55';
+                // Exatamente 13 dígitos, começando com 55
+                return clean.length === 13 && clean.substring(0, 2) === '55';
             }
 
             // Força apenas números no campo telefone e limita a 13 dígitos
@@ -425,10 +425,10 @@ trait AdminDrvManagerTrait {
                 var val = formatPhone($(this).val());
                 $(this).val(val);
                 // Feedback visual
-                if (val.length > 0 && !validatePhone(val)) {
-                    $(this).css('border-color', '#f59e0b');
-                } else if (val.length >= 12) {
+                if (val.length === 13 && validatePhone(val)) {
                     $(this).css('border-color', '#22c55e');
+                } else if (val.length > 0) {
+                    $(this).css('border-color', '#f59e0b');
                 } else {
                     $(this).css('border-color', '#e2e8f0');
                 }
@@ -503,7 +503,7 @@ trait AdminDrvManagerTrait {
                 });
 
                 if (hasInvalid) {
-                    showMessage('Corrija os telefones destacados. Formato: 55 + DDD + número (12-13 dígitos). Ex: 5583999471031', 'error');
+                    showMessage('Corrija os telefones destacados. Formato obrigatório: 13 dígitos (55 + DDD + número). Ex: 5583999471031', 'error');
                     return;
                 }
 
