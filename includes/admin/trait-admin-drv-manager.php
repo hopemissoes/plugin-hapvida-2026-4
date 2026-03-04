@@ -29,6 +29,9 @@ trait AdminDrvManagerTrait {
         add_action('admin_init', array($this, 'restrict_drv_manager_access'));
         add_action('admin_head', array($this, 'hide_admin_ui_for_drv_manager'));
         add_filter('admin_footer_text', array($this, 'drv_manager_footer_text'));
+
+        // Redireciona login direto para a página DRV
+        add_filter('login_redirect', array($this, 'drv_manager_login_redirect'), 10, 3);
     }
 
     /**
@@ -69,6 +72,20 @@ trait AdminDrvManagerTrait {
     }
 
     /**
+     * Redireciona login do gestor DRV direto para a página de vendedores.
+     */
+    public function drv_manager_login_redirect($redirect_to, $requested_redirect_to, $user)
+    {
+        if (is_wp_error($user) || !is_object($user)) {
+            return $redirect_to;
+        }
+        if (in_array('hapvida_gestor_drv', (array) $user->roles)) {
+            return admin_url('admin.php?page=hapvida-drv-manager');
+        }
+        return $redirect_to;
+    }
+
+    /**
      * Bloqueia acesso a outras páginas admin para o role gestor DRV.
      */
     public function restrict_drv_manager_access()
@@ -78,22 +95,25 @@ trait AdminDrvManagerTrait {
             return;
         }
 
-        // Permite apenas a página do gestor DRV e AJAX
         global $pagenow;
-        $allowed_pages = array('admin.php', 'admin-ajax.php', 'profile.php');
-        $allowed_slugs = array('hapvida-drv-manager');
+        $drv_url = admin_url('admin.php?page=hapvida-drv-manager');
 
+        // AJAX sempre permitido
+        if ($pagenow === 'admin-ajax.php') {
+            return;
+        }
+
+        // Página do gestor DRV - OK
         if ($pagenow === 'admin.php') {
             $page = isset($_GET['page']) ? $_GET['page'] : '';
-            if (!in_array($page, $allowed_slugs)) {
-                wp_redirect(admin_url('admin.php?page=hapvida-drv-manager'));
-                exit;
+            if ($page === 'hapvida-drv-manager') {
+                return;
             }
-        } elseif (!in_array($pagenow, $allowed_pages)) {
-            // Permite index.php (dashboard) mas redireciona
-            wp_redirect(admin_url('admin.php?page=hapvida-drv-manager'));
-            exit;
         }
+
+        // Qualquer outra página (index.php, profile.php, etc) -> redireciona
+        wp_redirect($drv_url);
+        exit;
     }
 
     /**
@@ -176,7 +196,7 @@ trait AdminDrvManagerTrait {
                     <span>Inativos</span>
                 </div>
                 <div class="drv-stat drv-stat-total">
-                    <strong><?php echo count($drv_vendors); ?></strong>
+                    <strong id="drv-count-total"><?php echo count($drv_vendors); ?></strong>
                     <span>Total</span>
                 </div>
             </div>
@@ -214,7 +234,7 @@ trait AdminDrvManagerTrait {
                                     <input type="text" class="drv-input drv-field-nome" value="<?php echo esc_attr($v['nome']); ?>" placeholder="Nome do vendedor" />
                                 </td>
                                 <td>
-                                    <input type="text" class="drv-input drv-field-telefone" value="<?php echo esc_attr($v['telefone']); ?>" placeholder="(XX) XXXXX-XXXX" />
+                                    <input type="text" class="drv-input drv-field-telefone" value="<?php echo esc_attr($v['telefone']); ?>" placeholder="5583999471031" maxlength="13" />
                                 </td>
                                 <td>
                                     <select class="drv-select drv-field-categoria">
@@ -372,13 +392,15 @@ trait AdminDrvManagerTrait {
             }
 
             function updateStats() {
-                var ativos = 0, inativos = 0;
+                var ativos = 0, inativos = 0, total = 0;
                 $('#drv-vendors-table tbody .drv-row').each(function() {
+                    total++;
                     var status = $(this).find('.drv-btn-toggle').data('status');
                     if (status === 'ativo') { ativos++; } else { inativos++; }
                 });
                 $('#drv-count-ativos').text(ativos);
                 $('#drv-count-inativos').text(inativos);
+                $('#drv-count-total').text(total);
             }
 
             function showMessage(text, type) {
@@ -386,6 +408,31 @@ trait AdminDrvManagerTrait {
                 $msg.removeClass('success error').addClass(type).text(text).show();
                 setTimeout(function() { $msg.fadeOut(); }, 4000);
             }
+
+            // Formatação de telefone: apenas números, máximo 13 dígitos (ex: 5583999471031)
+            function formatPhone(value) {
+                return value.replace(/\D/g, '').substring(0, 13);
+            }
+
+            function validatePhone(value) {
+                var clean = value.replace(/\D/g, '');
+                // Deve ter entre 12 e 13 dígitos e começar com 55
+                return clean.length >= 12 && clean.length <= 13 && clean.substring(0, 2) === '55';
+            }
+
+            // Força apenas números no campo telefone e limita a 13 dígitos
+            $(document).on('input', '.drv-field-telefone', function() {
+                var val = formatPhone($(this).val());
+                $(this).val(val);
+                // Feedback visual
+                if (val.length > 0 && !validatePhone(val)) {
+                    $(this).css('border-color', '#f59e0b');
+                } else if (val.length >= 12) {
+                    $(this).css('border-color', '#22c55e');
+                } else {
+                    $(this).css('border-color', '#e2e8f0');
+                }
+            });
 
             // Toggle status
             $(document).on('click', '.drv-btn-toggle', function() {
@@ -417,7 +464,6 @@ trait AdminDrvManagerTrait {
 
             // Add vendor
             $('#drv-add-vendor').on('click', function() {
-                // Remove empty row if exists
                 $('.drv-empty-row').remove();
 
                 var count = $('#drv-vendors-table tbody .drv-row').length + 1;
@@ -425,7 +471,7 @@ trait AdminDrvManagerTrait {
                     + '<td class="drv-row-num">' + count + '</td>'
                     + '<td><input type="text" class="drv-input drv-field-id" value="" placeholder="ID único" /></td>'
                     + '<td><input type="text" class="drv-input drv-field-nome" value="" placeholder="Nome do vendedor" /></td>'
-                    + '<td><input type="text" class="drv-input drv-field-telefone" value="" placeholder="(XX) XXXXX-XXXX" /></td>'
+                    + '<td><input type="text" class="drv-input drv-field-telefone" value="" placeholder="5583999471031" maxlength="13" /></td>'
                     + '<td><select class="drv-select drv-field-categoria"><option value="fixo">Fixo</option><option value="rotativo">Rotativo</option></select></td>'
                     + '<td><span class="drv-badge drv-badge-active">Ativo</span></td>'
                     + '<td><div class="drv-actions">'
@@ -434,20 +480,41 @@ trait AdminDrvManagerTrait {
                     + '</div></td></tr>';
 
                 $('#drv-vendors-table tbody').append(html);
+                updateStats();
                 $('#drv-vendors-table tbody .drv-row:last .drv-field-nome').focus();
             });
 
             // Save all
             $('#drv-save-all').on('click', function() {
                 var $btn = $(this);
+
+                // Valida telefones antes de salvar
+                var hasInvalid = false;
+                $('#drv-vendors-table tbody .drv-row').each(function() {
+                    var $row = $(this);
+                    var tel = $.trim($row.find('.drv-field-telefone').val());
+                    var nome = $.trim($row.find('.drv-field-nome').val());
+                    if (!nome && !tel) return; // vazio, será ignorado
+
+                    if (tel && !validatePhone(tel)) {
+                        $row.find('.drv-field-telefone').css('border-color', '#ef4444');
+                        hasInvalid = true;
+                    }
+                });
+
+                if (hasInvalid) {
+                    showMessage('Corrija os telefones destacados. Formato: 55 + DDD + número (12-13 dígitos). Ex: 5583999471031', 'error');
+                    return;
+                }
+
                 $btn.prop('disabled', true).text('Salvando...');
 
                 var vendors = [];
                 $('#drv-vendors-table tbody .drv-row').each(function() {
                     var $row = $(this);
                     var nome = $.trim($row.find('.drv-field-nome').val());
-                    var telefone = $.trim($row.find('.drv-field-telefone').val());
-                    if (!nome || !telefone) return; // pula vazios
+                    var telefone = formatPhone($.trim($row.find('.drv-field-telefone').val()));
+                    if (!nome || !telefone) return;
 
                     vendors.push({
                         vendedor_id: $.trim($row.find('.drv-field-id').val()),
@@ -465,7 +532,6 @@ trait AdminDrvManagerTrait {
                 }, function(response) {
                     if (response.success) {
                         showMessage('Vendedores DRV salvos com sucesso! (' + response.data.total + ' vendedores)', 'success');
-                        // Atualiza nonce para próximo save
                         if (response.data.new_nonce) {
                             nonce = response.data.new_nonce;
                             $('#drv-nonce').val(nonce);
