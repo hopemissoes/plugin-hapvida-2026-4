@@ -381,8 +381,8 @@ trait AdminDrvManagerTrait {
         </style>
 
         <script>
-        (function($) {
-            var ajaxurl = '<?php echo admin_url("admin-ajax.php"); ?>';
+        jQuery(document).ready(function($) {
+            var ajaxurl = '<?php echo esc_js(admin_url("admin-ajax.php")); ?>';
             var nonce = $('#drv-nonce').val();
 
             function renumberRows() {
@@ -406,7 +406,7 @@ trait AdminDrvManagerTrait {
             function showMessage(text, type) {
                 var $msg = $('#drv-message');
                 $msg.removeClass('success error').addClass(type).text(text).show();
-                setTimeout(function() { $msg.fadeOut(); }, 4000);
+                setTimeout(function() { $msg.fadeOut(); }, 6000);
             }
 
             // Formatação de telefone: apenas números, máximo 13 dígitos (ex: 5583999471031)
@@ -463,7 +463,7 @@ trait AdminDrvManagerTrait {
             });
 
             // Add vendor
-            $('#drv-add-vendor').on('click', function() {
+            $(document).on('click', '#drv-add-vendor', function() {
                 $('.drv-empty-row').remove();
 
                 var count = $('#drv-vendors-table tbody .drv-row').length + 1;
@@ -484,9 +484,13 @@ trait AdminDrvManagerTrait {
                 $('#drv-vendors-table tbody .drv-row:last .drv-field-nome').focus();
             });
 
-            // Save all
-            $('#drv-save-all').on('click', function() {
+            // Save all - delegado ao document para garantir binding
+            $(document).on('click', '#drv-save-all', function(e) {
+                e.preventDefault();
                 var $btn = $(this);
+
+                // Previne duplo clique
+                if ($btn.prop('disabled')) return;
 
                 // Valida telefones antes de salvar
                 var hasInvalid = false;
@@ -525,28 +529,35 @@ trait AdminDrvManagerTrait {
                     });
                 });
 
-                $.post(ajaxurl, {
-                    action: 'save_drv_vendors',
-                    security: nonce,
-                    vendors: JSON.stringify(vendors)
-                }, function(response) {
-                    if (response.success) {
-                        showMessage('Vendedores DRV salvos com sucesso! (' + response.data.total + ' vendedores)', 'success');
-                        if (response.data.new_nonce) {
-                            nonce = response.data.new_nonce;
-                            $('#drv-nonce').val(nonce);
+                $.ajax({
+                    url: ajaxurl,
+                    type: 'POST',
+                    dataType: 'json',
+                    data: {
+                        action: 'save_drv_vendors',
+                        security: nonce,
+                        vendors: JSON.stringify(vendors)
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            showMessage('Vendedores DRV salvos com sucesso! (' + response.data.total + ' vendedores)', 'success');
+                            if (response.data.new_nonce) {
+                                nonce = response.data.new_nonce;
+                                $('#drv-nonce').val(nonce);
+                            }
+                        } else {
+                            showMessage('Erro: ' + (response.data || 'Erro desconhecido'), 'error');
                         }
-                    } else {
-                        showMessage('Erro: ' + (response.data || 'Erro desconhecido'), 'error');
+                        $btn.prop('disabled', false).text('Salvar Alterações');
+                    },
+                    error: function(xhr, status, error) {
+                        showMessage('Erro de conexão (' + status + '). Tente novamente.', 'error');
+                        $btn.prop('disabled', false).text('Salvar Alterações');
                     }
-                    $btn.prop('disabled', false).text('Salvar Alterações');
-                }).fail(function() {
-                    showMessage('Erro de conexão. Tente novamente.', 'error');
-                    $btn.prop('disabled', false).text('Salvar Alterações');
                 });
             });
 
-        })(jQuery);
+        });
         </script>
         <?php
     }
