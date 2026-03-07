@@ -103,6 +103,24 @@ trait AdminDrvManagerTrait {
     var ajaxurl = drvManagerData.ajaxurl;
     var nonce = drvManagerData.nonce;
 
+    // === DEBUG LOG VISIVEL NA PAGINA ===
+    var $debugLog = $('#drv-debug-log');
+    $debugLog.show();
+    function debugLog(msg) {
+        var time = new Date().toLocaleTimeString();
+        $debugLog.append('<div>[' + time + '] ' + msg + '</div>');
+        $debugLog.scrollTop($debugLog[0].scrollHeight);
+        console.log('[DRV DEBUG] ' + msg);
+    }
+
+    debugLog('Script DRV carregado com sucesso');
+    debugLog('jQuery version: ' + $.fn.jquery);
+    debugLog('ajaxurl: ' + ajaxurl);
+    debugLog('nonce: ' + (nonce ? nonce.substring(0, 6) + '...' : 'VAZIO!'));
+    debugLog('Botao #drv-save-all encontrado: ' + ($('#drv-save-all').length > 0 ? 'SIM' : 'NAO'));
+    debugLog('Botao #drv-add-vendor encontrado: ' + ($('#drv-add-vendor').length > 0 ? 'SIM' : 'NAO'));
+    debugLog('Linhas na tabela: ' + $('#drv-vendors-table tbody .drv-row').length);
+
     function renumberRows() {
         $('#drv-vendors-table tbody .drv-row').each(function(i) {
             $(this).find('.drv-row-num').text(i + 1);
@@ -156,7 +174,7 @@ trait AdminDrvManagerTrait {
         return vendors;
     }
 
-    // Telefone: apenas números, máximo 13 dígitos
+    // Telefone: apenas numeros, maximo 13 digitos
     $(document).on('input', '.drv-field-telefone', function() {
         var val = formatPhone($(this).val());
         $(this).val(val);
@@ -184,6 +202,7 @@ trait AdminDrvManagerTrait {
             .text(newStatus === 'ativo' ? 'Ativo' : 'Inativo');
         $row.toggleClass('drv-row-inactive', newStatus === 'inativo');
         updateStats();
+        debugLog('Toggle: ' + $row.find('.drv-field-nome').val() + ' -> ' + newStatus);
     });
 
     // Remove vendor
@@ -192,10 +211,12 @@ trait AdminDrvManagerTrait {
         var nome = $row.find('.drv-field-nome').val();
         if (!confirm('Remover o vendedor "' + nome + '"?')) return;
         $row.fadeOut(300, function() { $(this).remove(); renumberRows(); updateStats(); });
+        debugLog('Removido: ' + nome);
     });
 
     // Add vendor
     $(document).on('click', '#drv-add-vendor', function() {
+        debugLog('Clicou em Adicionar Vendedor');
         $('.drv-empty-row').remove();
         var count = $('#drv-vendors-table tbody .drv-row').length + 1;
         var html = '<tr class="drv-row" data-index="new_' + Date.now() + '">'
@@ -212,14 +233,20 @@ trait AdminDrvManagerTrait {
         $('#drv-vendors-table tbody').append(html);
         updateStats();
         $('#drv-vendors-table tbody .drv-row:last .drv-field-nome').focus();
+        debugLog('Vendedor adicionado. Total linhas: ' + $('#drv-vendors-table tbody .drv-row').length);
     });
 
     // SAVE - via AJAX
     $(document).on('click', '#drv-save-all', function(e) {
         e.preventDefault();
         e.stopPropagation();
+        debugLog('=== CLICOU EM SALVAR ===');
         var $btn = $(this);
-        if ($btn.prop('disabled')) return;
+
+        if ($btn.prop('disabled')) {
+            debugLog('BLOQUEADO: botao esta disabled');
+            return;
+        }
 
         // Valida telefones
         var hasInvalid = false;
@@ -231,15 +258,20 @@ trait AdminDrvManagerTrait {
             if (tel && !validatePhone(tel)) {
                 $row.find('.drv-field-telefone').css('border-color', '#ef4444');
                 hasInvalid = true;
+                debugLog('Telefone invalido: "' + tel + '" do vendedor "' + nome + '"');
             }
         });
         if (hasInvalid) {
             showMessage('Corrija os telefones destacados. Formato: 13 digitos (55 + DDD + numero). Ex: 5583999471031', 'error');
+            debugLog('BLOQUEADO: telefones invalidos');
             return;
         }
 
         $btn.prop('disabled', true).text('Salvando...');
         var vendors = collectVendors();
+        debugLog('Vendedores coletados: ' + vendors.length);
+        debugLog('Dados: ' + JSON.stringify(vendors).substring(0, 200));
+        debugLog('Enviando AJAX para: ' + ajaxurl);
 
         // Tenta salvar via AJAX
         $.ajax({
@@ -253,19 +285,25 @@ trait AdminDrvManagerTrait {
                 vendors: JSON.stringify(vendors)
             },
             success: function(response) {
+                debugLog('AJAX success callback. Response: ' + JSON.stringify(response).substring(0, 300));
                 if (response && response.success) {
                     showMessage('Vendedores DRV salvos com sucesso! (' + response.data.total + ' vendedores)', 'success');
+                    debugLog('SALVO COM SUCESSO! Total: ' + response.data.total);
                     if (response.data.new_nonce) {
                         nonce = response.data.new_nonce;
+                        debugLog('Nonce atualizado');
                     }
                 } else {
                     var msg = (response && response.data) ? response.data : 'Erro desconhecido';
                     showMessage('Erro ao salvar: ' + msg, 'error');
+                    debugLog('ERRO do servidor: ' + msg);
                 }
                 $btn.prop('disabled', false).text('Salvar Alteracoes');
             },
             error: function(xhr, status, error) {
-                // Fallback: tenta salvar via form POST
+                debugLog('AJAX FALHOU! status=' + status + ' error=' + error + ' HTTP=' + xhr.status);
+                debugLog('Resposta bruta: ' + (xhr.responseText || '').substring(0, 500));
+                debugLog('Tentando fallback via form POST...');
                 showMessage('AJAX falhou (' + status + '). Salvando via formulario...', 'error');
                 submitViaForm(vendors);
             }
@@ -274,16 +312,17 @@ trait AdminDrvManagerTrait {
 
     // Fallback: salva via form POST normal
     function submitViaForm(vendors) {
-        var $form = $('<form>', {
-            method: 'POST',
-            action: drvManagerData.ajaxurl.replace('admin-ajax.php', 'admin-post.php')
-        });
+        var postUrl = ajaxurl.replace('admin-ajax.php', 'admin-post.php');
+        debugLog('Form POST para: ' + postUrl);
+        var $form = $('<form>', { method: 'POST', action: postUrl });
         $form.append($('<input>', { type: 'hidden', name: 'action', value: 'save_drv_vendors_form' }));
         $form.append($('<input>', { type: 'hidden', name: 'security', value: nonce }));
         $form.append($('<input>', { type: 'hidden', name: 'vendors', value: JSON.stringify(vendors) }));
         $('body').append($form);
         $form.submit();
     }
+
+    debugLog('Todos os event handlers registrados com sucesso');
 
 })(jQuery);
 JS;
@@ -519,6 +558,11 @@ JS;
                 <button type="button" id="drv-save-all" class="drv-btn-primary drv-btn-save">
                     Salvar Alterações
                 </button>
+            </div>
+
+            <!-- Log de debug visível -->
+            <div id="drv-debug-log" style="margin-top: 20px; padding: 12px; background: #1e293b; color: #22c55e; font-family: monospace; font-size: 12px; border-radius: 8px; max-height: 300px; overflow-y: auto; display: none;">
+                <strong style="color: #f59e0b;">Debug Log:</strong><br>
             </div>
 
         </div>
