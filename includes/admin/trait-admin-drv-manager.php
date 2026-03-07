@@ -25,7 +25,10 @@ trait AdminDrvManagerTrait {
         add_action('wp_ajax_save_drv_vendors', array($this, 'ajax_save_drv_vendors'));
         add_action('wp_ajax_add_drv_vendor_row', array($this, 'ajax_add_drv_vendor_row'));
 
-        // Enfileira jQuery na página do DRV manager
+        // Fallback: salvar via POST normal (caso AJAX falhe)
+        add_action('admin_post_save_drv_vendors_form', array($this, 'handle_save_drv_vendors_form'));
+
+        // Enfileira scripts na página do DRV manager
         add_action('admin_enqueue_scripts', array($this, 'enqueue_drv_manager_scripts'));
 
         // Restrições de UI para o role gestor DRV
@@ -75,7 +78,215 @@ trait AdminDrvManagerTrait {
         if (strpos($hook, 'hapvida-drv-manager') === false) {
             return;
         }
-        wp_enqueue_script('jquery');
+
+        // Registra script handle com dependência de jQuery
+        wp_register_script('drv-manager-js', false, array('jquery'), '1.0', true);
+        wp_enqueue_script('drv-manager-js');
+
+        // Passa dados PHP para o JavaScript de forma segura
+        wp_localize_script('drv-manager-js', 'drvManagerData', array(
+            'ajaxurl' => admin_url('admin-ajax.php'),
+            'nonce'   => wp_create_nonce('save_drv_vendors'),
+        ));
+
+        // Adiciona o JavaScript inline APÓS jQuery estar carregado
+        wp_add_inline_script('drv-manager-js', $this->get_drv_manager_js());
+    }
+
+    /**
+     * Retorna o JavaScript do DRV manager.
+     */
+    private function get_drv_manager_js()
+    {
+        return <<<'JS'
+(function($) {
+    var ajaxurl = drvManagerData.ajaxurl;
+    var nonce = drvManagerData.nonce;
+
+    function renumberRows() {
+        $('#drv-vendors-table tbody .drv-row').each(function(i) {
+            $(this).find('.drv-row-num').text(i + 1);
+        });
+    }
+
+    function updateStats() {
+        var ativos = 0, inativos = 0, total = 0;
+        $('#drv-vendors-table tbody .drv-row').each(function() {
+            total++;
+            var status = $(this).find('.drv-btn-toggle').data('status');
+            if (status === 'ativo') { ativos++; } else { inativos++; }
+        });
+        $('#drv-count-ativos').text(ativos);
+        $('#drv-count-inativos').text(inativos);
+        $('#drv-count-total').text(total);
+    }
+
+    function showMessage(text, type) {
+        var $msg = $('#drv-message');
+        $msg.removeClass('drv-msg-success drv-msg-error').addClass('drv-msg-' + type).text(text).show();
+        if (type === 'success') {
+            setTimeout(function() { $msg.fadeOut(); }, 8000);
+        }
+    }
+
+    function formatPhone(value) {
+        return value.replace(/\D/g, '').substring(0, 13);
+    }
+
+    function validatePhone(value) {
+        var clean = value.replace(/\D/g, '');
+        return clean.length === 13 && clean.substring(0, 2) === '55';
+    }
+
+    function collectVendors() {
+        var vendors = [];
+        $('#drv-vendors-table tbody .drv-row').each(function() {
+            var $row = $(this);
+            var nome = $.trim($row.find('.drv-field-nome').val());
+            var telefone = formatPhone($.trim($row.find('.drv-field-telefone').val()));
+            if (!nome || !telefone) return;
+            vendors.push({
+                vendedor_id: $.trim($row.find('.drv-field-id').val()),
+                nome: nome,
+                telefone: telefone,
+                categoria: $row.find('.drv-field-categoria').val(),
+                status: $row.find('.drv-btn-toggle').data('status')
+            });
+        });
+        return vendors;
+    }
+
+    // Telefone: apenas números, máximo 13 dígitos
+    $(document).on('input', '.drv-field-telefone', function() {
+        var val = formatPhone($(this).val());
+        $(this).val(val);
+        if (val.length === 13 && validatePhone(val)) {
+            $(this).css('border-color', '#22c55e');
+        } else if (val.length > 0) {
+            $(this).css('border-color', '#f59e0b');
+        } else {
+            $(this).css('border-color', '#e2e8f0');
+        }
+    });
+
+    // Toggle status
+    $(document).on('click', '.drv-btn-toggle', function() {
+        var $btn = $(this);
+        var $row = $btn.closest('tr');
+        var current = $btn.data('status');
+        var newStatus = current === 'ativo' ? 'inativo' : 'ativo';
+        $btn.data('status', newStatus).attr('data-status', newStatus);
+        $btn.html(newStatus === 'ativo' ? '&#x23F8;' : '&#x25B6;');
+        $btn.attr('title', newStatus === 'ativo' ? 'Desativar' : 'Ativar');
+        var $badge = $row.find('.drv-badge');
+        $badge.removeClass('drv-badge-active drv-badge-inactive')
+            .addClass(newStatus === 'ativo' ? 'drv-badge-active' : 'drv-badge-inactive')
+            .text(newStatus === 'ativo' ? 'Ativo' : 'Inativo');
+        $row.toggleClass('drv-row-inactive', newStatus === 'inativo');
+        updateStats();
+    });
+
+    // Remove vendor
+    $(document).on('click', '.drv-btn-remove', function() {
+        var $row = $(this).closest('tr');
+        var nome = $row.find('.drv-field-nome').val();
+        if (!confirm('Remover o vendedor "' + nome + '"?')) return;
+        $row.fadeOut(300, function() { $(this).remove(); renumberRows(); updateStats(); });
+    });
+
+    // Add vendor
+    $(document).on('click', '#drv-add-vendor', function() {
+        $('.drv-empty-row').remove();
+        var count = $('#drv-vendors-table tbody .drv-row').length + 1;
+        var html = '<tr class="drv-row" data-index="new_' + Date.now() + '">'
+            + '<td class="drv-row-num">' + count + '</td>'
+            + '<td><input type="text" class="drv-input drv-field-id" value="" placeholder="ID unico" /></td>'
+            + '<td><input type="text" class="drv-input drv-field-nome" value="" placeholder="Nome do vendedor" /></td>'
+            + '<td><input type="text" class="drv-input drv-field-telefone" value="" placeholder="5583999471031" maxlength="13" /></td>'
+            + '<td><select class="drv-select drv-field-categoria"><option value="fixo">Fixo</option><option value="rotativo">Rotativo</option></select></td>'
+            + '<td><span class="drv-badge drv-badge-active">Ativo</span></td>'
+            + '<td><div class="drv-actions">'
+            + '<button type="button" class="drv-btn drv-btn-toggle" data-status="ativo" title="Desativar">&#x23F8;</button>'
+            + '<button type="button" class="drv-btn drv-btn-remove" title="Remover">&#x2716;</button>'
+            + '</div></td></tr>';
+        $('#drv-vendors-table tbody').append(html);
+        updateStats();
+        $('#drv-vendors-table tbody .drv-row:last .drv-field-nome').focus();
+    });
+
+    // SAVE - via AJAX
+    $(document).on('click', '#drv-save-all', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $btn = $(this);
+        if ($btn.prop('disabled')) return;
+
+        // Valida telefones
+        var hasInvalid = false;
+        $('#drv-vendors-table tbody .drv-row').each(function() {
+            var $row = $(this);
+            var tel = $.trim($row.find('.drv-field-telefone').val());
+            var nome = $.trim($row.find('.drv-field-nome').val());
+            if (!nome && !tel) return;
+            if (tel && !validatePhone(tel)) {
+                $row.find('.drv-field-telefone').css('border-color', '#ef4444');
+                hasInvalid = true;
+            }
+        });
+        if (hasInvalid) {
+            showMessage('Corrija os telefones destacados. Formato: 13 digitos (55 + DDD + numero). Ex: 5583999471031', 'error');
+            return;
+        }
+
+        $btn.prop('disabled', true).text('Salvando...');
+        var vendors = collectVendors();
+
+        // Tenta salvar via AJAX
+        $.ajax({
+            url: ajaxurl,
+            type: 'POST',
+            dataType: 'json',
+            timeout: 30000,
+            data: {
+                action: 'save_drv_vendors',
+                security: nonce,
+                vendors: JSON.stringify(vendors)
+            },
+            success: function(response) {
+                if (response && response.success) {
+                    showMessage('Vendedores DRV salvos com sucesso! (' + response.data.total + ' vendedores)', 'success');
+                    if (response.data.new_nonce) {
+                        nonce = response.data.new_nonce;
+                    }
+                } else {
+                    var msg = (response && response.data) ? response.data : 'Erro desconhecido';
+                    showMessage('Erro ao salvar: ' + msg, 'error');
+                }
+                $btn.prop('disabled', false).text('Salvar Alteracoes');
+            },
+            error: function(xhr, status, error) {
+                // Fallback: tenta salvar via form POST
+                showMessage('AJAX falhou (' + status + '). Salvando via formulario...', 'error');
+                submitViaForm(vendors);
+            }
+        });
+    });
+
+    // Fallback: salva via form POST normal
+    function submitViaForm(vendors) {
+        var $form = $('<form>', {
+            method: 'POST',
+            action: drvManagerData.ajaxurl.replace('admin-ajax.php', 'admin-post.php')
+        });
+        $form.append($('<input>', { type: 'hidden', name: 'action', value: 'save_drv_vendors_form' }));
+        $form.append($('<input>', { type: 'hidden', name: 'security', value: nonce }));
+        $form.append($('<input>', { type: 'hidden', name: 'vendors', value: JSON.stringify(vendors) }));
+        $('body').append($form);
+        $form.submit();
+    }
+
+})(jQuery);
+JS;
     }
 
     /**
@@ -118,15 +329,15 @@ trait AdminDrvManagerTrait {
             return;
         }
 
-        // AJAX sempre permitido - múltiplas verificações para máxima compatibilidade
+        // AJAX e admin-post sempre permitidos
         if (wp_doing_ajax() || defined('DOING_AJAX') || (isset($_SERVER['REQUEST_URI']) && strpos($_SERVER['REQUEST_URI'], 'admin-ajax.php') !== false)) {
             return;
         }
 
         global $pagenow;
 
-        // AJAX via $pagenow (fallback)
-        if ($pagenow === 'admin-ajax.php') {
+        // AJAX e admin-post via $pagenow (fallback)
+        if ($pagenow === 'admin-ajax.php' || $pagenow === 'admin-post.php') {
             return;
         }
 
@@ -230,9 +441,13 @@ trait AdminDrvManagerTrait {
             </div>
 
             <!-- Mensagem de sucesso/erro -->
-            <div id="drv-message" class="drv-message" style="display: none;"></div>
-
-            <input type="hidden" id="drv-nonce" value="<?php echo esc_attr($nonce); ?>" />
+            <?php if (isset($_GET['saved']) && $_GET['saved'] == '1'): ?>
+                <div id="drv-message" class="drv-message drv-msg-success">
+                    Vendedores DRV salvos com sucesso! (<?php echo intval(isset($_GET['total']) ? $_GET['total'] : 0); ?> vendedores)
+                </div>
+            <?php else: ?>
+                <div id="drv-message" class="drv-message" style="display: none;"></div>
+            <?php endif; ?>
 
             <!-- Tabela -->
             <div class="drv-table-wrap">
@@ -334,14 +549,6 @@ trait AdminDrvManagerTrait {
             .drv-stat-inactive strong { color: #991b1b; }
             .drv-stat-total strong { color: #1e40af; }
 
-            /* Message */
-            .drv-message {
-                padding: 12px 16px; border-radius: 8px; margin-bottom: 16px;
-                font-size: 14px; font-weight: 500;
-            }
-            .drv-message.success { background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; }
-            .drv-message.error { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; }
-
             /* Table */
             .drv-table-wrap {
                 background: #fff; border: 1px solid #e2e8f0; border-radius: 10px;
@@ -400,6 +607,14 @@ trait AdminDrvManagerTrait {
             .drv-btn-save:hover { background: #1d4ed8; }
             .drv-btn-save:disabled { background: #94a3b8; cursor: not-allowed; }
 
+            /* Message */
+            .drv-message {
+                padding: 12px 16px; border-radius: 8px; margin-bottom: 16px;
+                font-size: 14px; font-weight: 500;
+            }
+            .drv-msg-success { background: #f0fdf4; border: 2px solid #22c55e; color: #166534; }
+            .drv-msg-error { background: #fef2f2; border: 2px solid #ef4444; color: #991b1b; }
+
             /* Responsive */
             @media (max-width: 768px) {
                 .drv-stats { flex-wrap: wrap; }
@@ -407,187 +622,64 @@ trait AdminDrvManagerTrait {
                 .drv-footer-actions { flex-direction: column; }
             }
         </style>
-
-        <script>
-        jQuery(document).ready(function($) {
-            var ajaxurl = '<?php echo esc_js(admin_url("admin-ajax.php")); ?>';
-            var nonce = $('#drv-nonce').val();
-
-            function renumberRows() {
-                $('#drv-vendors-table tbody .drv-row').each(function(i) {
-                    $(this).find('.drv-row-num').text(i + 1);
-                });
-            }
-
-            function updateStats() {
-                var ativos = 0, inativos = 0, total = 0;
-                $('#drv-vendors-table tbody .drv-row').each(function() {
-                    total++;
-                    var status = $(this).find('.drv-btn-toggle').data('status');
-                    if (status === 'ativo') { ativos++; } else { inativos++; }
-                });
-                $('#drv-count-ativos').text(ativos);
-                $('#drv-count-inativos').text(inativos);
-                $('#drv-count-total').text(total);
-            }
-
-            function showMessage(text, type) {
-                var $msg = $('#drv-message');
-                $msg.removeClass('success error').addClass(type).text(text).show();
-                setTimeout(function() { $msg.fadeOut(); }, 6000);
-            }
-
-            // Formatação de telefone: apenas números, máximo 13 dígitos (ex: 5583999471031)
-            function formatPhone(value) {
-                return value.replace(/\D/g, '').substring(0, 13);
-            }
-
-            function validatePhone(value) {
-                var clean = value.replace(/\D/g, '');
-                // Exatamente 13 dígitos, começando com 55
-                return clean.length === 13 && clean.substring(0, 2) === '55';
-            }
-
-            // Força apenas números no campo telefone e limita a 13 dígitos
-            $(document).on('input', '.drv-field-telefone', function() {
-                var val = formatPhone($(this).val());
-                $(this).val(val);
-                // Feedback visual
-                if (val.length === 13 && validatePhone(val)) {
-                    $(this).css('border-color', '#22c55e');
-                } else if (val.length > 0) {
-                    $(this).css('border-color', '#f59e0b');
-                } else {
-                    $(this).css('border-color', '#e2e8f0');
-                }
-            });
-
-            // Toggle status
-            $(document).on('click', '.drv-btn-toggle', function() {
-                var $btn = $(this);
-                var $row = $btn.closest('tr');
-                var current = $btn.data('status');
-                var newStatus = current === 'ativo' ? 'inativo' : 'ativo';
-
-                $btn.data('status', newStatus).attr('data-status', newStatus);
-                $btn.html(newStatus === 'ativo' ? '&#x23F8;' : '&#x25B6;');
-                $btn.attr('title', newStatus === 'ativo' ? 'Desativar' : 'Ativar');
-
-                var $badge = $row.find('.drv-badge');
-                $badge.removeClass('drv-badge-active drv-badge-inactive')
-                    .addClass(newStatus === 'ativo' ? 'drv-badge-active' : 'drv-badge-inactive')
-                    .text(newStatus === 'ativo' ? 'Ativo' : 'Inativo');
-
-                $row.toggleClass('drv-row-inactive', newStatus === 'inativo');
-                updateStats();
-            });
-
-            // Remove vendor
-            $(document).on('click', '.drv-btn-remove', function() {
-                var $row = $(this).closest('tr');
-                var nome = $row.find('.drv-field-nome').val();
-                if (!confirm('Remover o vendedor "' + nome + '"?')) return;
-                $row.fadeOut(300, function() { $(this).remove(); renumberRows(); updateStats(); });
-            });
-
-            // Add vendor
-            $(document).on('click', '#drv-add-vendor', function() {
-                $('.drv-empty-row').remove();
-
-                var count = $('#drv-vendors-table tbody .drv-row').length + 1;
-                var html = '<tr class="drv-row" data-index="new_' + Date.now() + '">'
-                    + '<td class="drv-row-num">' + count + '</td>'
-                    + '<td><input type="text" class="drv-input drv-field-id" value="" placeholder="ID único" /></td>'
-                    + '<td><input type="text" class="drv-input drv-field-nome" value="" placeholder="Nome do vendedor" /></td>'
-                    + '<td><input type="text" class="drv-input drv-field-telefone" value="" placeholder="5583999471031" maxlength="13" /></td>'
-                    + '<td><select class="drv-select drv-field-categoria"><option value="fixo">Fixo</option><option value="rotativo">Rotativo</option></select></td>'
-                    + '<td><span class="drv-badge drv-badge-active">Ativo</span></td>'
-                    + '<td><div class="drv-actions">'
-                    + '<button type="button" class="drv-btn drv-btn-toggle" data-status="ativo" title="Desativar">&#x23F8;</button>'
-                    + '<button type="button" class="drv-btn drv-btn-remove" title="Remover">&#x2716;</button>'
-                    + '</div></td></tr>';
-
-                $('#drv-vendors-table tbody').append(html);
-                updateStats();
-                $('#drv-vendors-table tbody .drv-row:last .drv-field-nome').focus();
-            });
-
-            // Save all - delegado ao document para garantir binding
-            $(document).on('click', '#drv-save-all', function(e) {
-                e.preventDefault();
-                var $btn = $(this);
-
-                // Previne duplo clique
-                if ($btn.prop('disabled')) return;
-
-                // Valida telefones antes de salvar
-                var hasInvalid = false;
-                $('#drv-vendors-table tbody .drv-row').each(function() {
-                    var $row = $(this);
-                    var tel = $.trim($row.find('.drv-field-telefone').val());
-                    var nome = $.trim($row.find('.drv-field-nome').val());
-                    if (!nome && !tel) return; // vazio, será ignorado
-
-                    if (tel && !validatePhone(tel)) {
-                        $row.find('.drv-field-telefone').css('border-color', '#ef4444');
-                        hasInvalid = true;
-                    }
-                });
-
-                if (hasInvalid) {
-                    showMessage('Corrija os telefones destacados. Formato obrigatório: 13 dígitos (55 + DDD + número). Ex: 5583999471031', 'error');
-                    return;
-                }
-
-                $btn.prop('disabled', true).text('Salvando...');
-
-                var vendors = [];
-                $('#drv-vendors-table tbody .drv-row').each(function() {
-                    var $row = $(this);
-                    var nome = $.trim($row.find('.drv-field-nome').val());
-                    var telefone = formatPhone($.trim($row.find('.drv-field-telefone').val()));
-                    if (!nome || !telefone) return;
-
-                    vendors.push({
-                        vendedor_id: $.trim($row.find('.drv-field-id').val()),
-                        nome: nome,
-                        telefone: telefone,
-                        categoria: $row.find('.drv-field-categoria').val(),
-                        status: $row.find('.drv-btn-toggle').data('status')
-                    });
-                });
-
-                $.ajax({
-                    url: ajaxurl,
-                    type: 'POST',
-                    dataType: 'json',
-                    data: {
-                        action: 'save_drv_vendors',
-                        security: nonce,
-                        vendors: JSON.stringify(vendors)
-                    },
-                    success: function(response) {
-                        if (response.success) {
-                            showMessage('Vendedores DRV salvos com sucesso! (' + response.data.total + ' vendedores)', 'success');
-                            if (response.data.new_nonce) {
-                                nonce = response.data.new_nonce;
-                                $('#drv-nonce').val(nonce);
-                            }
-                        } else {
-                            showMessage('Erro: ' + (response.data || 'Erro desconhecido'), 'error');
-                        }
-                        $btn.prop('disabled', false).text('Salvar Alterações');
-                    },
-                    error: function(xhr, status, error) {
-                        showMessage('Erro de conexão (' + status + '). Tente novamente.', 'error');
-                        $btn.prop('disabled', false).text('Salvar Alterações');
-                    }
-                });
-            });
-
-        });
-        </script>
         <?php
+    }
+
+    /**
+     * Fallback: Salva vendedores DRV via form POST normal (caso AJAX falhe).
+     */
+    public function handle_save_drv_vendors_form()
+    {
+        if (!current_user_can('manage_hapvida_drv')) {
+            wp_die('Acesso negado.');
+        }
+
+        if (!isset($_POST['security']) || !wp_verify_nonce($_POST['security'], 'save_drv_vendors')) {
+            wp_die('Token de segurança inválido. Recarregue a página.');
+        }
+
+        $raw = isset($_POST['vendors']) ? wp_unslash($_POST['vendors']) : '[]';
+        $vendors_input = json_decode($raw, true);
+
+        if (!is_array($vendors_input)) {
+            wp_die('Dados inválidos.');
+        }
+
+        $drv_vendors = $this->sanitize_drv_vendors($vendors_input);
+
+        $all_vendors = get_option($this->vendedores_option, array());
+        $all_vendors['drv'] = $drv_vendors;
+        update_option($this->vendedores_option, $all_vendors);
+
+        error_log("HAPVIDA DRV FORM SAVE: " . count($drv_vendors) . " vendedores salvos por " . wp_get_current_user()->user_login);
+
+        wp_redirect(admin_url('admin.php?page=hapvida-drv-manager&saved=1&total=' . count($drv_vendors)));
+        exit;
+    }
+
+    /**
+     * Sanitiza array de vendedores DRV.
+     */
+    private function sanitize_drv_vendors($vendors_input)
+    {
+        $drv_vendors = array();
+        foreach ($vendors_input as $v) {
+            $nome = sanitize_text_field(isset($v['nome']) ? $v['nome'] : '');
+            $telefone = sanitize_text_field(isset($v['telefone']) ? $v['telefone'] : '');
+
+            if (empty($nome) || empty($telefone)) {
+                continue;
+            }
+
+            $drv_vendors[] = array(
+                'vendedor_id' => sanitize_text_field(isset($v['vendedor_id']) ? $v['vendedor_id'] : ''),
+                'nome' => $nome,
+                'telefone' => $telefone,
+                'categoria' => in_array(isset($v['categoria']) ? $v['categoria'] : '', array('fixo', 'rotativo')) ? $v['categoria'] : 'fixo',
+                'status' => in_array(isset($v['status']) ? $v['status'] : '', array('ativo', 'inativo')) ? $v['status'] : 'ativo',
+            );
+        }
+        return $drv_vendors;
     }
 
     /**
@@ -613,28 +705,12 @@ trait AdminDrvManagerTrait {
         $vendors_input = json_decode($raw, true);
 
         if (!is_array($vendors_input)) {
+            error_log('HAPVIDA DRV SAVE: ERRO - JSON inválido: ' . substr($raw, 0, 200));
             wp_send_json_error('Dados inválidos');
             return;
         }
 
-        // Sanitiza os dados
-        $drv_vendors = array();
-        foreach ($vendors_input as $v) {
-            $nome = sanitize_text_field(isset($v['nome']) ? $v['nome'] : '');
-            $telefone = sanitize_text_field(isset($v['telefone']) ? $v['telefone'] : '');
-
-            if (empty($nome) || empty($telefone)) {
-                continue;
-            }
-
-            $drv_vendors[] = array(
-                'vendedor_id' => sanitize_text_field(isset($v['vendedor_id']) ? $v['vendedor_id'] : ''),
-                'nome' => $nome,
-                'telefone' => $telefone,
-                'categoria' => in_array(isset($v['categoria']) ? $v['categoria'] : '', array('fixo', 'rotativo')) ? $v['categoria'] : 'fixo',
-                'status' => in_array(isset($v['status']) ? $v['status'] : '', array('ativo', 'inativo')) ? $v['status'] : 'ativo',
-            );
-        }
+        $drv_vendors = $this->sanitize_drv_vendors($vendors_input);
 
         // Lê a option completa e atualiza APENAS o grupo DRV
         $all_vendors = get_option($this->vendedores_option, array());
