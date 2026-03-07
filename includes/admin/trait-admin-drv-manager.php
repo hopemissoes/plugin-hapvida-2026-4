@@ -15,7 +15,7 @@ trait AdminDrvManagerTrait {
      */
     public function init_drv_manager()
     {
-        // Garante que o role existe
+        // Garante que o role existe e tem as capabilities corretas
         $this->ensure_drv_manager_role();
 
         // Menu page para o gestor DRV
@@ -24,6 +24,9 @@ trait AdminDrvManagerTrait {
         // AJAX handlers para salvar vendedores DRV
         add_action('wp_ajax_save_drv_vendors', array($this, 'ajax_save_drv_vendors'));
         add_action('wp_ajax_add_drv_vendor_row', array($this, 'ajax_add_drv_vendor_row'));
+
+        // Enfileira jQuery na página do DRV manager
+        add_action('admin_enqueue_scripts', array($this, 'enqueue_drv_manager_scripts'));
 
         // Restrições de UI para o role gestor DRV
         add_action('admin_init', array($this, 'restrict_drv_manager_access'));
@@ -46,6 +49,14 @@ trait AdminDrvManagerTrait {
                 'read' => true,
                 'manage_hapvida_drv' => true,
             ));
+        } else {
+            // Garante que o role existente tem as capabilities corretas
+            if (!$role->has_cap('read')) {
+                $role->add_cap('read');
+            }
+            if (!$role->has_cap('manage_hapvida_drv')) {
+                $role->add_cap('manage_hapvida_drv');
+            }
         }
 
         // Garante que admin também tem a capability
@@ -53,6 +64,18 @@ trait AdminDrvManagerTrait {
         if ($admin && !$admin->has_cap('manage_hapvida_drv')) {
             $admin->add_cap('manage_hapvida_drv');
         }
+    }
+
+    /**
+     * Enfileira scripts necessários para a página do DRV manager.
+     */
+    public function enqueue_drv_manager_scripts($hook)
+    {
+        // Verifica se está na página do DRV manager
+        if (strpos($hook, 'hapvida-drv-manager') === false) {
+            return;
+        }
+        wp_enqueue_script('jquery');
     }
 
     /**
@@ -95,10 +118,14 @@ trait AdminDrvManagerTrait {
             return;
         }
 
-        global $pagenow;
-        $drv_url = admin_url('admin.php?page=hapvida-drv-manager');
+        // AJAX sempre permitido - múltiplas verificações para máxima compatibilidade
+        if (wp_doing_ajax() || defined('DOING_AJAX') || (isset($_SERVER['REQUEST_URI']) && strpos($_SERVER['REQUEST_URI'], 'admin-ajax.php') !== false)) {
+            return;
+        }
 
-        // AJAX sempre permitido
+        global $pagenow;
+
+        // AJAX via $pagenow (fallback)
         if ($pagenow === 'admin-ajax.php') {
             return;
         }
@@ -112,6 +139,7 @@ trait AdminDrvManagerTrait {
         }
 
         // Qualquer outra página (index.php, profile.php, etc) -> redireciona
+        $drv_url = admin_url('admin.php?page=hapvida-drv-manager');
         wp_redirect($drv_url);
         exit;
     }
@@ -567,13 +595,17 @@ trait AdminDrvManagerTrait {
      */
     public function ajax_save_drv_vendors()
     {
+        error_log('HAPVIDA DRV SAVE: Iniciando ajax_save_drv_vendors - User: ' . wp_get_current_user()->user_login);
+
         if (!current_user_can('manage_hapvida_drv')) {
-            wp_send_json_error('Acesso negado');
+            error_log('HAPVIDA DRV SAVE: ERRO - Acesso negado para user: ' . wp_get_current_user()->user_login . ' - Roles: ' . implode(',', wp_get_current_user()->roles));
+            wp_send_json_error('Acesso negado. Seu usuário não tem permissão para esta ação.');
             return;
         }
 
         if (!isset($_POST['security']) || !wp_verify_nonce($_POST['security'], 'save_drv_vendors')) {
-            wp_send_json_error('Token de segurança inválido. Recarregue a página.');
+            error_log('HAPVIDA DRV SAVE: ERRO - Nonce inválido');
+            wp_send_json_error('Token de segurança inválido. Recarregue a página e tente novamente.');
             return;
         }
 
