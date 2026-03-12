@@ -1130,22 +1130,57 @@ trait ShortcodeFormTrait {
                     padding: 10px;
                 }
 
-                .hapvida-promo-banner { font-size: 11px; }
+                .hapvida-promo-label { font-size: 13px; }
+                .hapvida-promo-label strong { font-size: 15px; }
+                .hapvida-promo-timer .cd-num { font-size: 18px; }
+                .hapvida-promo-timer .cd-block { min-width: 40px; padding: 5px 8px; }
             }
 
-            /* === PROMO BANNER - LINHA ÚNICA === */
+            /* === PROMO BANNER === */
             .hapvida-promo-banner {
                 background: linear-gradient(135deg, #ff6b00, #e85d00);
-                border-radius: 8px;
-                padding: 8px 14px;
-                margin-bottom: 14px;
+                border-radius: 10px;
+                padding: 14px 18px;
+                margin-bottom: 16px;
                 color: #fff;
                 text-align: center;
                 font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                font-size: 13px;
             }
-            .hapvida-promo-text strong { font-weight: 800; }
-            .hapvida-promo-text span { font-variant-numeric: tabular-nums; font-weight: 700; }
+            .hapvida-promo-label {
+                font-size: 15px;
+                font-weight: 700;
+                display: block;
+                margin-bottom: 8px;
+            }
+            .hapvida-promo-label strong {
+                font-size: 17px;
+                font-weight: 900;
+            }
+            .hapvida-promo-timer {
+                display: flex;
+                justify-content: center;
+                gap: 8px;
+            }
+            .hapvida-promo-timer .cd-block {
+                background: rgba(0,0,0,0.2);
+                border-radius: 6px;
+                padding: 6px 10px;
+                min-width: 48px;
+                text-align: center;
+            }
+            .hapvida-promo-timer .cd-num {
+                font-size: 22px;
+                font-weight: 800;
+                font-variant-numeric: tabular-nums;
+                line-height: 1.1;
+                display: block;
+            }
+            .hapvida-promo-timer .cd-lbl {
+                font-size: 10px;
+                text-transform: uppercase;
+                opacity: 0.85;
+                letter-spacing: 0.5px;
+            }
                 </style>
 
                 <!-- HTML DO FORMULARIO -->
@@ -1165,7 +1200,13 @@ trait ShortcodeFormTrait {
 
                     <!-- Banner Promocional com Countdown -->
                     <div class="hapvida-promo-banner">
-                        <span class="hapvida-promo-text"><strong>15% OFF em 3x</strong> &mdash; oferta acaba em <span id="hapvida-cd-days">00</span>d <span id="hapvida-cd-hours">00</span>h <span id="hapvida-cd-mins">00</span>m <span id="hapvida-cd-secs">00</span>s</span>
+                        <span class="hapvida-promo-label"><strong>15% OFF em 3x</strong> &mdash; oferta acaba em:</span>
+                        <div class="hapvida-promo-timer">
+                            <div class="cd-block"><span class="cd-num" id="hapvida-cd-days">00</span><span class="cd-lbl">dias</span></div>
+                            <div class="cd-block"><span class="cd-num" id="hapvida-cd-hours">00</span><span class="cd-lbl">horas</span></div>
+                            <div class="cd-block"><span class="cd-num" id="hapvida-cd-mins">00</span><span class="cd-lbl">min</span></div>
+                            <div class="cd-block"><span class="cd-num" id="hapvida-cd-secs">00</span><span class="cd-lbl">seg</span></div>
+                        </div>
                     </div>
 
                     <form class="hapvida-form no-lazy" id="hapvida-main-form">
