@@ -73,6 +73,26 @@ trait ShortcodeFormTrait {
             var wrap = document.getElementById("hapvida-lazy-wrap");
             if (!wrap) return;
             var loaded = false;
+            function insertAndExecute(container, html) {
+                var temp = document.createElement("div");
+                temp.innerHTML = html;
+                var parent = container.parentNode;
+                while (temp.firstChild) {
+                    parent.insertBefore(temp.firstChild, container);
+                }
+                parent.removeChild(container);
+                var scripts = parent.querySelectorAll("script");
+                for (var i = 0; i < scripts.length; i++) {
+                    var oldScript = scripts[i];
+                    var newScript = document.createElement("script");
+                    if (oldScript.src) {
+                        newScript.src = oldScript.src;
+                    } else {
+                        newScript.textContent = oldScript.textContent;
+                    }
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                }
+            }
             function loadForm() {
                 if (loaded) return;
                 loaded = true;
@@ -85,7 +105,7 @@ trait ShortcodeFormTrait {
                             try {
                                 var resp = JSON.parse(xhr.responseText);
                                 if (resp.success && resp.data && resp.data.html) {
-                                    wrap.outerHTML = resp.data.html;
+                                    insertAndExecute(wrap, resp.data.html);
                                 } else {
                                     wrap.innerHTML = "<p style=\"color:#991b1b;text-align:center;\">Erro ao carregar formulário. Recarregue a página.</p>";
                                 }
