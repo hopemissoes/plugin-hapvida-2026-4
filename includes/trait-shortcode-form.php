@@ -1130,111 +1130,22 @@ trait ShortcodeFormTrait {
                     padding: 10px;
                 }
 
-                .hapvida-promo-banner {
-                    flex-direction: column;
-                    gap: 8px;
-                    text-align: center;
-                }
-                .hapvida-promo-text strong { font-size: 12px; }
-                .hapvida-promo-sub { font-size: 10px; }
-                .hapvida-timer-num { font-size: 16px; min-width: 32px; padding: 4px 6px; }
-                .hapvida-timer-label { font-size: 8px; }
-                .hapvida-timer-sep { font-size: 14px; }
+                .hapvida-promo-banner { font-size: 11px; }
             }
 
-            /* === PROMO BANNER COM COUNTDOWN === */
+            /* === PROMO BANNER - LINHA ÚNICA === */
             .hapvida-promo-banner {
-                display: flex;
-                align-items: center;
-                gap: 12px;
-                background: linear-gradient(135deg, #ff6b00 0%, #ff8c33 100%);
-                border-radius: 14px;
-                padding: 14px 18px;
-                margin-bottom: 18px;
+                background: linear-gradient(135deg, #ff6b00, #e85d00);
+                border-radius: 8px;
+                padding: 8px 14px;
+                margin-bottom: 14px;
                 color: #fff;
-                position: relative;
-                overflow: hidden;
-                animation: hapvida-promo-pulse 3s ease-in-out infinite;
-            }
-            .hapvida-promo-banner::before {
-                content: '';
-                position: absolute;
-                top: -50%;
-                left: -50%;
-                width: 200%;
-                height: 200%;
-                background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 60%);
-                animation: hapvida-promo-shine 4s linear infinite;
-            }
-            @keyframes hapvida-promo-pulse {
-                0%, 100% { box-shadow: 0 2px 12px rgba(255,107,0,0.3); }
-                50% { box-shadow: 0 4px 20px rgba(255,107,0,0.5); }
-            }
-            @keyframes hapvida-promo-shine {
-                0% { transform: rotate(0deg); }
-                100% { transform: rotate(360deg); }
-            }
-            .hapvida-promo-icon {
-                font-size: 28px;
-                flex-shrink: 0;
-                position: relative;
-                z-index: 1;
-            }
-            .hapvida-promo-text {
-                flex: 1;
-                position: relative;
-                z-index: 1;
-                line-height: 1.3;
-            }
-            .hapvida-promo-text strong {
-                display: block;
-                font-size: 14px;
-                font-weight: 800;
-                letter-spacing: -0.2px;
-            }
-            .hapvida-promo-sub {
-                font-size: 11px;
-                opacity: 0.9;
-                font-weight: 500;
-            }
-            .hapvida-promo-timer {
-                display: flex;
-                align-items: center;
-                gap: 4px;
-                flex-shrink: 0;
-                position: relative;
-                z-index: 1;
-            }
-            .hapvida-timer-block {
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-            }
-            .hapvida-timer-num {
-                background: rgba(0,0,0,0.25);
-                border-radius: 6px;
-                padding: 4px 8px;
-                font-size: 18px;
-                font-weight: 800;
-                min-width: 38px;
                 text-align: center;
-                font-variant-numeric: tabular-nums;
-                line-height: 1.2;
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                font-size: 13px;
             }
-            .hapvida-timer-label {
-                font-size: 9px;
-                text-transform: uppercase;
-                font-weight: 600;
-                opacity: 0.85;
-                margin-top: 2px;
-                letter-spacing: 0.5px;
-            }
-            .hapvida-timer-sep {
-                font-size: 16px;
-                font-weight: 700;
-                opacity: 0.7;
-                margin-bottom: 12px;
-            }
+            .hapvida-promo-text strong { font-weight: 800; }
+            .hapvida-promo-text span { font-variant-numeric: tabular-nums; font-weight: 700; }
                 </style>
 
                 <!-- HTML DO FORMULARIO -->
@@ -1254,32 +1165,7 @@ trait ShortcodeFormTrait {
 
                     <!-- Banner Promocional com Countdown -->
                     <div class="hapvida-promo-banner">
-                        <div class="hapvida-promo-icon">&#x1F525;</div>
-                        <div class="hapvida-promo-text">
-                            <strong>15% de desconto em 3 parcelas</strong>
-                            <span class="hapvida-promo-sub">Promoção válida até o fim do mês</span>
-                        </div>
-                        <div class="hapvida-promo-timer" id="hapvida-countdown">
-                            <div class="hapvida-timer-block">
-                                <span class="hapvida-timer-num" id="hapvida-cd-days">00</span>
-                                <span class="hapvida-timer-label">dias</span>
-                            </div>
-                            <span class="hapvida-timer-sep">:</span>
-                            <div class="hapvida-timer-block">
-                                <span class="hapvida-timer-num" id="hapvida-cd-hours">00</span>
-                                <span class="hapvida-timer-label">hrs</span>
-                            </div>
-                            <span class="hapvida-timer-sep">:</span>
-                            <div class="hapvida-timer-block">
-                                <span class="hapvida-timer-num" id="hapvida-cd-mins">00</span>
-                                <span class="hapvida-timer-label">min</span>
-                            </div>
-                            <span class="hapvida-timer-sep">:</span>
-                            <div class="hapvida-timer-block">
-                                <span class="hapvida-timer-num" id="hapvida-cd-secs">00</span>
-                                <span class="hapvida-timer-label">seg</span>
-                            </div>
-                        </div>
+                        <span class="hapvida-promo-text"><strong>15% OFF em 3x</strong> &mdash; oferta acaba em <span id="hapvida-cd-days">00</span>d <span id="hapvida-cd-hours">00</span>h <span id="hapvida-cd-mins">00</span>m <span id="hapvida-cd-secs">00</span>s</span>
                     </div>
 
                     <form class="hapvida-form no-lazy" id="hapvida-main-form">
