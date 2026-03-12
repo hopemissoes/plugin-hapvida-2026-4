@@ -1199,6 +1199,11 @@ trait ShortcodeFormTrait {
                     <?php endif; ?>
 
                     <!-- Banner Promocional com Countdown -->
+                    <?php
+                    $promo_opts = get_option('formulario_hapvida_settings', array());
+                    $show_promo = !isset($promo_opts['promo_banner']) || $promo_opts['promo_banner'] === '1';
+                    if ($show_promo):
+                    ?>
                     <div class="hapvida-promo-banner">
                         <span class="hapvida-promo-label"><strong>15% OFF em 3x</strong> &mdash; oferta acaba em:</span>
                         <div class="hapvida-promo-timer">
@@ -1208,6 +1213,7 @@ trait ShortcodeFormTrait {
                             <div class="cd-block"><span class="cd-num" id="hapvida-cd-secs">00</span><span class="cd-lbl">seg</span></div>
                         </div>
                     </div>
+                    <?php endif; ?>
 
                     <form class="hapvida-form no-lazy" id="hapvida-main-form">
                         <!-- Nome Completo -->
@@ -1394,6 +1400,7 @@ trait ShortcodeFormTrait {
                 </div>
 
                 <script>
+                    <?php if ($show_promo): ?>
                     // === COUNTDOWN ATÉ FIM DO MÊS ===
                     (function() {
                         function updateCountdown() {
@@ -1414,6 +1421,7 @@ trait ShortcodeFormTrait {
                         updateCountdown();
                         setInterval(updateCountdown, 1000);
                     })();
+                    <?php endif; ?>
 
                             (function ($) {
                                    'use strict';
