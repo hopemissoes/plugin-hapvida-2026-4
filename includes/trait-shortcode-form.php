@@ -1215,10 +1215,10 @@ trait ShortcodeFormTrait {
                     <div class="hapvida-promo-banner">
                         <span class="hapvida-promo-label"><strong>15% OFF em 3x</strong> &mdash; oferta acaba em:</span>
                         <div class="hapvida-promo-timer">
-                            <div class="hapvida-cd-block"><span class="hapvida-cd-num" id="hapvida-cd-days">00</span><span class="hapvida-cd-lbl">DIAS</span></div>
-                            <div class="hapvida-cd-block"><span class="hapvida-cd-num" id="hapvida-cd-hours">00</span><span class="hapvida-cd-lbl">HORAS</span></div>
-                            <div class="hapvida-cd-block"><span class="hapvida-cd-num" id="hapvida-cd-mins">00</span><span class="hapvida-cd-lbl">MIN</span></div>
-                            <div class="hapvida-cd-block"><span class="hapvida-cd-num" id="hapvida-cd-secs">00</span><span class="hapvida-cd-lbl">SEG</span></div>
+                            <div class="hapvida-cd-block"><span class="hapvida-cd-num hapvida-cd-days">00</span><span class="hapvida-cd-lbl">DIAS</span></div>
+                            <div class="hapvida-cd-block"><span class="hapvida-cd-num hapvida-cd-hours">00</span><span class="hapvida-cd-lbl">HORAS</span></div>
+                            <div class="hapvida-cd-block"><span class="hapvida-cd-num hapvida-cd-mins">00</span><span class="hapvida-cd-lbl">MIN</span></div>
+                            <div class="hapvida-cd-block"><span class="hapvida-cd-num hapvida-cd-secs">00</span><span class="hapvida-cd-lbl">SEG</span></div>
                         </div>
                     </div>
                     <?php endif; ?>
@@ -1409,8 +1409,15 @@ trait ShortcodeFormTrait {
 
                 <script>
                     <?php if ($show_promo): ?>
-                    // === COUNTDOWN ATÉ FIM DO MÊS ===
+                    // === COUNTDOWN ATÉ FIM DO MÊS (suporta múltiplas instâncias) ===
                     (function() {
+                        if (window._hapvidaCountdownActive) return;
+                        window._hapvidaCountdownActive = true;
+                        function pad(n) { return n < 10 ? '0' + n : n; }
+                        function updateAll(sel, val) {
+                            var els = document.querySelectorAll(sel);
+                            for (var i = 0; i < els.length; i++) { els[i].textContent = val; }
+                        }
                         function updateCountdown() {
                             var now = new Date();
                             var endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
@@ -1420,11 +1427,10 @@ trait ShortcodeFormTrait {
                             var h = Math.floor((diff % 86400000) / 3600000);
                             var m = Math.floor((diff % 3600000) / 60000);
                             var s = Math.floor((diff % 60000) / 1000);
-                            var el = function(id) { return document.getElementById(id); };
-                            if (el('hapvida-cd-days')) el('hapvida-cd-days').textContent = d < 10 ? '0' + d : d;
-                            if (el('hapvida-cd-hours')) el('hapvida-cd-hours').textContent = h < 10 ? '0' + h : h;
-                            if (el('hapvida-cd-mins')) el('hapvida-cd-mins').textContent = m < 10 ? '0' + m : m;
-                            if (el('hapvida-cd-secs')) el('hapvida-cd-secs').textContent = s < 10 ? '0' + s : s;
+                            updateAll('.hapvida-cd-days', pad(d));
+                            updateAll('.hapvida-cd-hours', pad(h));
+                            updateAll('.hapvida-cd-mins', pad(m));
+                            updateAll('.hapvida-cd-secs', pad(s));
                         }
                         updateCountdown();
                         setInterval(updateCountdown, 1000);
