@@ -1189,10 +1189,32 @@ trait ShortcodeFormTrait {
                 color: #fff !important;
                 margin-top: 2px !important;
             }
+
+            /* === VERSÃO SEM TÍTULO (para uso em popups/embeds) === */
+            .hapvida-form-container.hapvida-sem-titulo {
+                background: #fff !important;
+                backdrop-filter: none !important;
+                -webkit-backdrop-filter: none !important;
+                border: none !important;
+                box-shadow: none !important;
+                padding: 10px 12px !important;
+                border-radius: 0 !important;
+                max-width: 100% !important;
+            }
+            .hapvida-form-container.hapvida-sem-titulo::before,
+            .hapvida-form-container.hapvida-sem-titulo::after {
+                display: none !important;
+            }
+            .hapvida-form-container.hapvida-sem-titulo .hapvida-promo-banner {
+                border-radius: 10px !important;
+                margin-left: 0 !important;
+                margin-right: 0 !important;
+                overflow: hidden !important;
+            }
                 </style>
 
                 <!-- HTML DO FORMULARIO -->
-                <div class="hapvida-form-container no-lazy">
+                <div class="hapvida-form-container no-lazy<?php echo $sem_titulo ? ' hapvida-sem-titulo' : ''; ?>">
                     <?php if (!$sem_titulo): ?>
                     <div class="hapvida-form-header">
                         <div class="hapvida-form-title">
