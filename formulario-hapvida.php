@@ -108,10 +108,6 @@ class Formulario_Hapvida
 
         $this->ensure_timezone_configured();
 
-        // Lazy load do formulário
-        add_action('wp_ajax_hapvida_load_form', array($this, 'ajax_load_form_html'));
-        add_action('wp_ajax_nopriv_hapvida_load_form', array($this, 'ajax_load_form_html'));
-
         // *** CORREÇÃO CRÍTICA: Adiciona actions AJAX para frontend ***
         add_action('wp_ajax_adjust_submission_count', array($this, 'ajax_adjust_submission_count'));
         add_action('wp_ajax_nopriv_adjust_submission_count', array($this, 'ajax_adjust_submission_count'));

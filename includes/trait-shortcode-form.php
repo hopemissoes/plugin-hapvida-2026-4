@@ -22,116 +22,15 @@ trait ShortcodeFormTrait {
         return $this->shortcode($atts);
     }
 
-    /**
-     * AJAX handler para lazy load do formulário.
-     */
-    public function ajax_load_form_html()
-    {
-        check_ajax_referer('hapvida_load_form', 'security');
-
-        $form_id = isset($_POST['form_id']) ? sanitize_text_field($_POST['form_id']) : 'hapvida-form';
-        $sem_titulo = isset($_POST['sem_titulo']) && $_POST['sem_titulo'] === 'true';
-
-        $html = $this->render_form_html($form_id, $sem_titulo);
-        wp_send_json_success(array('html' => $html));
-    }
-
-    public function shortcode($atts)
+public function shortcode($atts)
     {
         $atts = shortcode_atts(array(
             'form_id' => 'hapvida-form',
             'sem_titulo' => 'false',
-            'lazy' => 'true',
         ), $atts);
 
-        // Se lazy=true, retorna placeholder leve
-        if ($atts['lazy'] === 'true') {
-            return $this->render_lazy_placeholder($atts['form_id'], $atts['sem_titulo']);
-        }
-
-        // Renderização imediata (lazy=false)
+        // Renderização imediata (sempre)
         return $this->render_form_html($atts['form_id'], $atts['sem_titulo'] === 'true');
-    }
-
-    /**
-     * Renderiza o placeholder leve para lazy loading.
-     */
-    private function render_lazy_placeholder($form_id, $sem_titulo)
-    {
-        $ajax_url = admin_url('admin-ajax.php');
-        $nonce = wp_create_nonce('hapvida_load_form');
-
-        return '<div id="hapvida-lazy-wrap" data-form-id="' . esc_attr($form_id) . '" data-sem-titulo="' . esc_attr($sem_titulo) . '" style="min-height:400px;display:flex;align-items:center;justify-content:center;">
-            <div id="hapvida-lazy-spinner" style="text-align:center;padding:40px;">
-                <div style="width:40px;height:40px;border:4px solid #e2e8f0;border-top:4px solid #ff6b00;border-radius:50%;animation:hapvida-spin 0.8s linear infinite;margin:0 auto 16px;"></div>
-                <p style="color:#64748b;font-family:-apple-system,BlinkMacSystemFont,sans-serif;font-size:14px;">Carregando formulário...</p>
-            </div>
-        </div>
-        <style>@keyframes hapvida-spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}</style>
-        <script>
-        (function(){
-            var wrap = document.getElementById("hapvida-lazy-wrap");
-            if (!wrap) return;
-            var loaded = false;
-            function insertAndExecute(container, html) {
-                var temp = document.createElement("div");
-                temp.innerHTML = html;
-                var parent = container.parentNode;
-                while (temp.firstChild) {
-                    parent.insertBefore(temp.firstChild, container);
-                }
-                parent.removeChild(container);
-                var scripts = parent.querySelectorAll("script");
-                for (var i = 0; i < scripts.length; i++) {
-                    var oldScript = scripts[i];
-                    var newScript = document.createElement("script");
-                    if (oldScript.src) {
-                        newScript.src = oldScript.src;
-                    } else {
-                        newScript.textContent = oldScript.textContent;
-                    }
-                    oldScript.parentNode.replaceChild(newScript, oldScript);
-                }
-            }
-            function loadForm() {
-                if (loaded) return;
-                loaded = true;
-                var xhr = new XMLHttpRequest();
-                xhr.open("POST", "' . esc_js($ajax_url) . '", true);
-                xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
-                xhr.onreadystatechange = function() {
-                    if (xhr.readyState === 4) {
-                        if (xhr.status === 200) {
-                            try {
-                                var resp = JSON.parse(xhr.responseText);
-                                if (resp.success && resp.data && resp.data.html) {
-                                    insertAndExecute(wrap, resp.data.html);
-                                } else {
-                                    wrap.innerHTML = "<p style=\"color:#991b1b;text-align:center;\">Erro ao carregar formulário. Recarregue a página.</p>";
-                                }
-                            } catch(e) {
-                                wrap.innerHTML = "<p style=\"color:#991b1b;text-align:center;\">Erro ao processar formulário.</p>";
-                            }
-                        } else {
-                            wrap.innerHTML = "<p style=\"color:#991b1b;text-align:center;\">Falha na conexão. Recarregue a página.</p>";
-                        }
-                    }
-                };
-                xhr.send("action=hapvida_load_form&security=' . esc_js($nonce) . '&form_id=' . esc_js($form_id) . '&sem_titulo=' . esc_js($sem_titulo) . '");
-            }
-            if ("IntersectionObserver" in window) {
-                var observer = new IntersectionObserver(function(entries) {
-                    if (entries[0].isIntersecting) {
-                        observer.disconnect();
-                        loadForm();
-                    }
-                }, { rootMargin: "200px" });
-                observer.observe(wrap);
-            } else {
-                loadForm();
-            }
-        })();
-        </script>';
     }
 
     /**
