@@ -1197,9 +1197,9 @@ trait ShortcodeFormTrait {
                 -webkit-backdrop-filter: none !important;
                 border: none !important;
                 box-shadow: none !important;
-                padding: 0 20px !important;
+                padding: 0 32px !important;
                 border-radius: 0 !important;
-                max-width: 100% !important;
+                max-width: 420px !important;
                 margin: 0 auto !important;
             }
             .hapvida-form-container.hapvida-sem-titulo::before,
