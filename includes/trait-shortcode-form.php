@@ -1130,56 +1130,64 @@ trait ShortcodeFormTrait {
                     padding: 10px;
                 }
 
-                .hapvida-promo-label { font-size: 13px; }
-                .hapvida-promo-label strong { font-size: 15px; }
-                .hapvida-promo-timer .cd-num { font-size: 18px; }
-                .hapvida-promo-timer .cd-block { min-width: 40px; padding: 5px 8px; }
+                .hapvida-promo-banner .hapvida-promo-label { font-size: 14px !important; }
+                .hapvida-promo-banner .hapvida-promo-label strong { font-size: 15px !important; }
+                .hapvida-promo-banner .hapvida-promo-timer .hapvida-cd-num { font-size: 22px !important; }
+                .hapvida-promo-banner .hapvida-promo-timer .hapvida-cd-block { min-width: 44px !important; padding: 6px 8px !important; }
             }
 
             /* === PROMO BANNER === */
             .hapvida-promo-banner {
-                background: linear-gradient(135deg, #ff6b00, #e85d00);
-                border-radius: 10px;
-                padding: 14px 18px;
-                margin-bottom: 16px;
-                color: #fff;
-                text-align: center;
-                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                background: linear-gradient(135deg, #ff6b00, #e85d00) !important;
+                border-radius: 10px !important;
+                padding: 16px 20px !important;
+                margin-bottom: 16px !important;
+                color: #fff !important;
+                text-align: center !important;
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+                box-sizing: border-box !important;
             }
-            .hapvida-promo-label {
-                font-size: 15px;
-                font-weight: 700;
-                display: block;
-                margin-bottom: 8px;
+            .hapvida-promo-banner .hapvida-promo-label {
+                font-size: 16px !important;
+                font-weight: 700 !important;
+                display: block !important;
+                margin-bottom: 10px !important;
+                color: #fff !important;
             }
-            .hapvida-promo-label strong {
-                font-size: 17px;
-                font-weight: 900;
+            .hapvida-promo-banner .hapvida-promo-label strong {
+                font-size: 18px !important;
+                font-weight: 900 !important;
             }
-            .hapvida-promo-timer {
-                display: flex;
-                justify-content: center;
-                gap: 8px;
+            .hapvida-promo-banner .hapvida-promo-timer {
+                display: flex !important;
+                justify-content: center !important;
+                gap: 8px !important;
+                flex-wrap: nowrap !important;
             }
-            .hapvida-promo-timer .cd-block {
-                background: rgba(0,0,0,0.2);
-                border-radius: 6px;
-                padding: 6px 10px;
-                min-width: 48px;
-                text-align: center;
+            .hapvida-promo-banner .hapvida-promo-timer .hapvida-cd-block {
+                background: rgba(0,0,0,0.2) !important;
+                border-radius: 6px !important;
+                padding: 8px 12px !important;
+                min-width: 54px !important;
+                text-align: center !important;
+                box-sizing: border-box !important;
             }
-            .hapvida-promo-timer .cd-num {
-                font-size: 22px;
-                font-weight: 800;
-                font-variant-numeric: tabular-nums;
-                line-height: 1.1;
-                display: block;
+            .hapvida-promo-banner .hapvida-promo-timer .hapvida-cd-num {
+                font-size: 28px !important;
+                font-weight: 800 !important;
+                font-variant-numeric: tabular-nums !important;
+                line-height: 1.1 !important;
+                display: block !important;
+                color: #fff !important;
             }
-            .hapvida-promo-timer .cd-lbl {
-                font-size: 10px;
-                text-transform: uppercase;
+            .hapvida-promo-banner .hapvida-promo-timer .hapvida-cd-lbl {
+                font-size: 11px !important;
+                text-transform: uppercase !important;
                 opacity: 0.85;
-                letter-spacing: 0.5px;
+                letter-spacing: 0.5px !important;
+                display: block !important;
+                color: #fff !important;
+                margin-top: 2px !important;
             }
                 </style>
 
@@ -1207,10 +1215,10 @@ trait ShortcodeFormTrait {
                     <div class="hapvida-promo-banner">
                         <span class="hapvida-promo-label"><strong>15% OFF em 3x</strong> &mdash; oferta acaba em:</span>
                         <div class="hapvida-promo-timer">
-                            <div class="cd-block"><span class="cd-num" id="hapvida-cd-days">00</span><span class="cd-lbl">dias</span></div>
-                            <div class="cd-block"><span class="cd-num" id="hapvida-cd-hours">00</span><span class="cd-lbl">horas</span></div>
-                            <div class="cd-block"><span class="cd-num" id="hapvida-cd-mins">00</span><span class="cd-lbl">min</span></div>
-                            <div class="cd-block"><span class="cd-num" id="hapvida-cd-secs">00</span><span class="cd-lbl">seg</span></div>
+                            <div class="hapvida-cd-block"><span class="hapvida-cd-num" id="hapvida-cd-days">00</span><span class="hapvida-cd-lbl">DIAS</span></div>
+                            <div class="hapvida-cd-block"><span class="hapvida-cd-num" id="hapvida-cd-hours">00</span><span class="hapvida-cd-lbl">HORAS</span></div>
+                            <div class="hapvida-cd-block"><span class="hapvida-cd-num" id="hapvida-cd-mins">00</span><span class="hapvida-cd-lbl">MIN</span></div>
+                            <div class="hapvida-cd-block"><span class="hapvida-cd-num" id="hapvida-cd-secs">00</span><span class="hapvida-cd-lbl">SEG</span></div>
                         </div>
                     </div>
                     <?php endif; ?>
