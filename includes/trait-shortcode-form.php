@@ -1197,9 +1197,10 @@ trait ShortcodeFormTrait {
                 -webkit-backdrop-filter: none !important;
                 border: none !important;
                 box-shadow: none !important;
-                padding: 10px 12px !important;
+                padding: 0 !important;
                 border-radius: 0 !important;
                 max-width: 100% !important;
+                margin: 0 auto !important;
             }
             .hapvida-form-container.hapvida-sem-titulo::before,
             .hapvida-form-container.hapvida-sem-titulo::after {
@@ -1207,9 +1208,11 @@ trait ShortcodeFormTrait {
             }
             .hapvida-form-container.hapvida-sem-titulo .hapvida-promo-banner {
                 border-radius: 10px !important;
-                margin-left: 0 !important;
-                margin-right: 0 !important;
+                margin: 0 0 16px 0 !important;
                 overflow: hidden !important;
+            }
+            .hapvida-form-container.hapvida-sem-titulo .hapvida-form {
+                padding: 0 !important;
             }
                 </style>
 
