@@ -1132,8 +1132,8 @@ trait ShortcodeFormTrait {
 
                 .hapvida-promo-banner .hapvida-promo-label { font-size: 14px !important; }
                 .hapvida-promo-banner .hapvida-promo-label strong { font-size: 15px !important; }
-                .hapvida-promo-banner .hapvida-promo-timer .hapvida-cd-num { font-size: 22px !important; }
-                .hapvida-promo-banner .hapvida-promo-timer .hapvida-cd-block { min-width: 44px !important; padding: 6px 8px !important; }
+                .hapvida-promo-banner .hapvida-promo-timer .hapvida-cd-num { font-size: 18px !important; }
+                .hapvida-promo-banner .hapvida-promo-timer .hapvida-cd-block { min-width: 38px !important; padding: 5px 6px !important; }
             }
 
             /* === PROMO BANNER === */
@@ -1167,21 +1167,21 @@ trait ShortcodeFormTrait {
             .hapvida-promo-banner .hapvida-promo-timer .hapvida-cd-block {
                 background: rgba(0,0,0,0.2) !important;
                 border-radius: 6px !important;
-                padding: 8px 12px !important;
-                min-width: 54px !important;
+                padding: 6px 8px !important;
+                min-width: 44px !important;
                 text-align: center !important;
                 box-sizing: border-box !important;
             }
             .hapvida-promo-banner .hapvida-promo-timer .hapvida-cd-num {
-                font-size: 28px !important;
+                font-size: 22px !important;
                 font-weight: 800 !important;
                 font-variant-numeric: tabular-nums !important;
-                line-height: 1.1 !important;
+                line-height: 1.2 !important;
                 display: block !important;
                 color: #fff !important;
             }
             .hapvida-promo-banner .hapvida-promo-timer .hapvida-cd-lbl {
-                font-size: 11px !important;
+                font-size: 10px !important;
                 text-transform: uppercase !important;
                 opacity: 0.85;
                 letter-spacing: 0.5px !important;
