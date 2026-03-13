@@ -1197,7 +1197,7 @@ trait ShortcodeFormTrait {
                 -webkit-backdrop-filter: none !important;
                 border: none !important;
                 box-shadow: none !important;
-                padding: 0 !important;
+                padding: 0 20px !important;
                 border-radius: 0 !important;
                 max-width: 100% !important;
                 margin: 0 auto !important;
