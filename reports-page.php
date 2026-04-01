@@ -1047,8 +1047,13 @@ class Formulario_Hapvida_Reports
                     <h3>Faturado para</h3>
                     <div class="company-info">
                         <p><strong><?php echo esc_html($group_name); ?></strong></p>
+                        <?php if ($selected_group === 'drv'): ?>
+                        <p>CNPJ: 21.888.220/0001-73</p>
+                        <p>📍 Fortaleza – CE, Brasil</p>
+                        <?php else: ?>
                         <p>CNPJ: 11.111.111/0001-11</p>
                         <p>📍 São Paulo – SP, Brasil</p>
+                        <?php endif; ?>
                     </div>
                 </div>
 
