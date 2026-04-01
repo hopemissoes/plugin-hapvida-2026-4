@@ -1344,7 +1344,7 @@ public function shortcode($atts)
                         }
                         function updateCountdown() {
                             var now = new Date();
-                            var deadline = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 5, 23, 59, 59);
+                            var deadline = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 23, 59, 59);
                             var diff = deadline - now;
                             if (diff <= 0) { diff = 0; }
                             var d = Math.floor(diff / 86400000);
