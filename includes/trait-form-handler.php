@@ -198,13 +198,6 @@ trait FormHandlerTrait {
                         $this->save_webhook_entry($webhook_data, 'pending_retry', "Falha imediata: {$erro}", null, $webhook_url);
                     }
 
-                    // Registra entrega pendente para monitoramento via Evolution API
-                    global $hapvida_delivery_tracking;
-                    if ($hapvida_delivery_tracking) {
-                        $vendedor['grupo'] = $grupo;
-                        $hapvida_delivery_tracking->register_pending_delivery($vendedor, isset($form_data['lead_id']) ? $form_data['lead_id'] : uniqid('lead_'));
-                    }
-
                 } else {
                     error_log("HAPVIDA WEBHOOK: URL NAO CONFIGURADA para grupo {$grupo} - lead {$form_data['lead_id']}");
                     $this->save_webhook_entry($webhook_data, 'permanent_failure', "URL do webhook nao configurada para grupo {$grupo}");

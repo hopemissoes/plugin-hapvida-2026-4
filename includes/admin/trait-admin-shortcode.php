@@ -92,11 +92,6 @@ trait AdminShortcodeTrait {
                 </div>
             </div>
 
-            <!-- SEÇÃO: MONITORAMENTO DE ENTREGAS -->
-            <div class="dashboard-section delivery-tracking-section">
-                <?php $this->render_delivery_tracking_frontend(); ?>
-            </div>
-
             <!-- ⭐ NOVA SEÇÃO: GERENCIAMENTO DE VENDEDORES -->
             <div class="dashboard-section vendors-management-section">
                 <?php $this->render_vendors_management_frontend(); ?>

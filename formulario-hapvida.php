@@ -17,21 +17,11 @@ if (defined('FORMULARIO_HAPVIDA_LOADED')) {
 }
 define('FORMULARIO_HAPVIDA_LOADED', true);
 
-// *** Carrega integração com Google Sheets (antes do admin-page que usa a classe) ***
-if (!class_exists('Formulario_Hapvida_Google_Sheets')) {
-    require_once plugin_dir_path(__FILE__) . 'google-sheets.php';
-}
-
 // Carrega a página de administração
 require_once plugin_dir_path(__FILE__) . 'admin-page.php';
 
 // Carrega a página de relatórios (shortcode [hapvida_reports])
 require_once plugin_dir_path(__FILE__) . 'reports-page.php';
-
-// Sistema de rastreamento de entregas via Evolution API
-if (!class_exists('Hapvida_Delivery_Tracking')) {
-    require_once plugin_dir_path(__FILE__) . 'delivery-tracking.php';
-}
 
 // *** NOVO: Carrega o sistema de integração com API LeadP3 ***
 if (!class_exists('Formulario_Hapvida_LeadP3_Integration')) {

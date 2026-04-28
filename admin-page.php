@@ -11,7 +11,6 @@ require_once plugin_dir_path(__FILE__) . 'includes/admin/trait-admin-vendors.php
 require_once plugin_dir_path(__FILE__) . 'includes/admin/trait-admin-ajax.php';
 require_once plugin_dir_path(__FILE__) . 'includes/admin/trait-admin-scripts.php';
 require_once plugin_dir_path(__FILE__) . 'includes/admin/trait-admin-shortcode.php';
-require_once plugin_dir_path(__FILE__) . 'includes/admin/trait-admin-delivery.php';
 require_once plugin_dir_path(__FILE__) . 'includes/admin/trait-admin-page-renderer.php';
 
 class Formulario_Hapvida_Admin
@@ -22,7 +21,6 @@ class Formulario_Hapvida_Admin
     use AdminAjaxTrait;
     use AdminScriptsTrait;
     use AdminShortcodeTrait;
-    use AdminDeliveryTrait;
     use AdminPageRendererTrait;
 
     private $option_name = 'formulario_hapvida_settings';
@@ -99,18 +97,6 @@ class Formulario_Hapvida_Admin
 
         add_action('wp_ajax_get_vendors_list_frontend', array($this, 'ajax_get_vendors_list_frontend'));
         add_action('wp_ajax_nopriv_get_vendors_list_frontend', array($this, 'ajax_get_vendors_list_frontend'));
-
-        add_action('wp_ajax_get_delivery_stats', array($this, 'ajax_get_delivery_stats'));
-        add_action('wp_ajax_nopriv_get_delivery_stats', array($this, 'ajax_get_delivery_stats'));
-
-        add_action('wp_ajax_toggle_auto_deactivation', array($this, 'ajax_toggle_auto_deactivation'));
-        add_action('wp_ajax_nopriv_toggle_auto_deactivation', array($this, 'ajax_toggle_auto_deactivation'));
-
-        add_action('wp_ajax_clear_delivery_records', array($this, 'ajax_clear_delivery_records'));
-        add_action('wp_ajax_nopriv_clear_delivery_records', array($this, 'ajax_clear_delivery_records'));
-
-        add_action('wp_ajax_confirm_delivery', array($this, 'ajax_confirm_delivery'));
-        add_action('wp_ajax_nopriv_confirm_delivery', array($this, 'ajax_confirm_delivery'));
 
     }
 
