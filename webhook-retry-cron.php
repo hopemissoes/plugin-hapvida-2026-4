@@ -5,12 +5,13 @@
  * Fluxo: formulário tenta 1x rápido (10s). Se falhar, salva na fila.
  * Este cron roda a cada 2 minutos (efetivo: ~3 min, conforme cron do servidor).
  *
- * Schedule de retry (com cron servidor de 3 min):
- * - 1ª retry: imediata na próxima execução do cron (~3 min após falha)
- * - 2ª retry: 3 min após falha da 1ª (~6 min total)
- * - 3ª retry: 6 min após falha da 2ª (~12 min total)
+ * Schedule de retry (4 tentativas, intervalos em minutos: 3, 6, 9, 12):
+ * - 1ª retry: 3 min após falha imediata
+ * - 2ª retry: 6 min após falha da 1ª
+ * - 3ª retry: 9 min após falha da 2ª
+ * - 4ª retry: 12 min após falha da 3ª
  *
- * Pior caso: lead reenviado em ~12 min.
+ * Pior caso (alinhado ao cron de 3 min): ~30-33 min para esgotar 4 tentativas.
  */
 
 if (!defined('ABSPATH')) {
@@ -104,7 +105,7 @@ class Formulario_Hapvida_Webhook_Retry {
             }
 
             // Verifica se excedeu max_attempts
-            $max_attempts = isset($webhook['max_attempts']) ? intval($webhook['max_attempts']) : 3;
+            $max_attempts = isset($webhook['max_attempts']) ? intval($webhook['max_attempts']) : 4;
             $attempts = isset($webhook['attempts']) ? intval($webhook['attempts']) : 0;
 
             if ($attempts >= $max_attempts) {
@@ -163,7 +164,7 @@ class Formulario_Hapvida_Webhook_Retry {
 
             } else {
                 // Falhou - calcula próximo retry
-                $retry_schedule = isset($webhook['retry_schedule']) ? $webhook['retry_schedule'] : array(0, 3, 6);
+                $retry_schedule = isset($webhook['retry_schedule']) ? $webhook['retry_schedule'] : array(3, 6, 9, 12);
                 $next_interval_index = min($attempt_num, count($retry_schedule) - 1);
                 $next_interval = $retry_schedule[$next_interval_index];
 

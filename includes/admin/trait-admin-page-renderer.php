@@ -2668,7 +2668,7 @@ trait AdminPageRendererTrait {
                                 html += '    <div class="webhook-detail"><strong>🏙️ Cidade:</strong> ' + (webhook.client_city || 'N/A') + '</div>';
                                 html += '    <div class="webhook-detail"><strong>👤 Vendedor:</strong> ' + (webhook.vendor_name || 'N/A') + '</div>';
                                 html += '    <div class="webhook-detail"><strong>🏢 Grupo:</strong> ' + (webhook.vendor_group || 'N/A') + '</div>';
-                                html += '    <div class="webhook-detail"><strong>🔄 Tentativas:</strong> ' + (webhook.attempts || 0) + '/' + (webhook.max_attempts || 3) + '</div>';
+                                html += '    <div class="webhook-detail"><strong>🔄 Tentativas:</strong> ' + (webhook.attempts || 0) + '/' + (webhook.max_attempts || 4) + '</div>';
                                 html += '    <div class="webhook-detail"><strong>⏰ Última tentativa:</strong> ' + (webhook.last_attempt || 'N/A') + '</div>';
                                 html += '  </div>';
 
