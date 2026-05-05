@@ -2,15 +2,15 @@
 /**
  * Sistema de Retry Automático de Webhooks em Background
  *
- * Fluxo: formulário tenta 1x rápido (5s). Se falhar, salva na fila.
- * Este cron roda a cada 2 minutos e reprocessa os webhooks da fila.
+ * Fluxo: formulário tenta 1x rápido (10s). Se falhar, salva na fila.
+ * Este cron roda a cada 2 minutos (efetivo: ~3 min, conforme cron do servidor).
  *
- * Schedule de retry:
- * - Tentativa 1: 2 minutos após falha
- * - Tentativa 2: 5 minutos após falha
- * - Tentativa 3: 10 minutos após falha
+ * Schedule de retry (com cron servidor de 3 min):
+ * - 1ª retry: imediata na próxima execução do cron (~3 min após falha)
+ * - 2ª retry: 3 min após falha da 1ª (~6 min total)
+ * - 3ª retry: 6 min após falha da 2ª (~12 min total)
  *
- * Resolve em no máximo 10 minutos (falhas de DNS são breves).
+ * Pior caso: lead reenviado em ~12 min.
  */
 
 if (!defined('ABSPATH')) {
@@ -163,7 +163,7 @@ class Formulario_Hapvida_Webhook_Retry {
 
             } else {
                 // Falhou - calcula próximo retry
-                $retry_schedule = isset($webhook['retry_schedule']) ? $webhook['retry_schedule'] : array(2, 5, 10);
+                $retry_schedule = isset($webhook['retry_schedule']) ? $webhook['retry_schedule'] : array(0, 3, 6);
                 $next_interval_index = min($attempt_num, count($retry_schedule) - 1);
                 $next_interval = $retry_schedule[$next_interval_index];
 

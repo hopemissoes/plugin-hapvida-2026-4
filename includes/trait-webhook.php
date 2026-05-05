@@ -12,9 +12,10 @@ trait WebhookTrait {
             // Garante que sempre tem um ID único
             $webhook_id = 'webhook_' . time() . '_' . wp_rand(1000, 9999);
 
-            // Schedule de retry em background: 2min, 5min, 10min
-            $retry_intervals = array(2, 5, 10);
-            $next_retry_minutes = isset($retry_intervals[0]) ? $retry_intervals[0] : 2;
+            // Schedule de retry em background (cron servidor 3 min): 0, 3, 6 min
+            // 1ª retry imediata (proximo cron), 2ª em +3 min, 3ª em +6 min
+            $retry_intervals = array(0, 3, 6);
+            $next_retry_minutes = isset($retry_intervals[0]) ? $retry_intervals[0] : 0;
 
             $entry = array(
                 'id' => $webhook_id,
