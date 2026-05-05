@@ -12,6 +12,7 @@ require_once plugin_dir_path(__FILE__) . 'includes/admin/trait-admin-ajax.php';
 require_once plugin_dir_path(__FILE__) . 'includes/admin/trait-admin-scripts.php';
 require_once plugin_dir_path(__FILE__) . 'includes/admin/trait-admin-shortcode.php';
 require_once plugin_dir_path(__FILE__) . 'includes/admin/trait-admin-page-renderer.php';
+require_once plugin_dir_path(__FILE__) . 'includes/admin/trait-admin-drv-manager.php';
 
 class Formulario_Hapvida_Admin
 {
@@ -22,6 +23,7 @@ class Formulario_Hapvida_Admin
     use AdminScriptsTrait;
     use AdminShortcodeTrait;
     use AdminPageRendererTrait;
+    use AdminDrvManagerTrait;
 
     private $option_name = 'formulario_hapvida_settings';
     private $vendedores_option = 'formulario_hapvida_vendedores';
@@ -40,6 +42,9 @@ class Formulario_Hapvida_Admin
         $this->daily_submissions_option = 'formulario_hapvida_daily_submissions';
         $this->monthly_submissions_option = 'formulario_hapvida_monthly_submissions';
         $this->failed_webhooks_option = 'formulario_hapvida_failed_webhooks';
+
+        // Gestor DRV (role + menu + AJAX)
+        $this->init_drv_manager();
 
         // Hooks administrativos
         add_action('admin_menu', array($this, 'add_admin_menu'));
