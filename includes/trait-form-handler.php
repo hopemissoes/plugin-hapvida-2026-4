@@ -120,6 +120,7 @@ trait FormHandlerTrait {
             $options = get_option($this->settings_option_name);
             $is_business_hours = $this->is_horario_comercial();
             $webhook_success = false;
+            $webhook_state = 'failed'; // 'sent' (ok imediato) | 'queued' (na fila de retry) | 'failed' (definitivo / sem URL)
 
             try {
                 // Prepara dados do webhook
@@ -186,26 +187,37 @@ trait FormHandlerTrait {
                             // Sucesso na primeira tentativa
                             error_log("HAPVIDA WEBHOOK: SUCESSO imediato - HTTP {$response_code} - lead {$form_data['lead_id']}");
                             $webhook_success = true;
+                            $webhook_state = 'sent';
                             $this->save_webhook_entry($webhook_data, 'sent', "Enviado com sucesso imediato - HTTP {$response_code}");
+                        } elseif ($response_code >= 400 && $response_code < 500 && $response_code !== 408 && $response_code !== 429) {
+                            // 4xx definitivo (auth/not found/bad request) - nao adianta retentar
+                            $erro = "HTTP {$response_code}";
+                            error_log("HAPVIDA WEBHOOK: ERRO DEFINITIVO imediato - {$erro} - lead {$form_data['lead_id']} - cancelando retries");
+                            $webhook_state = 'failed';
+                            $this->save_webhook_entry($webhook_data, 'permanent_failure', "Erro definitivo imediato: {$erro}", $response_code, $webhook_url);
                         } else {
                             $erro = "HTTP {$response_code}";
                             error_log("HAPVIDA WEBHOOK: FALHA imediata - {$erro} - lead {$form_data['lead_id']} - enviando pro cron");
+                            $webhook_state = 'queued';
                             $this->save_webhook_entry($webhook_data, 'pending_retry', "Falha imediata: {$erro}", $response_code, $webhook_url);
                         }
                     } else {
                         $erro = $webhook_response->get_error_message();
                         error_log("HAPVIDA WEBHOOK: FALHA imediata - {$erro} - lead {$form_data['lead_id']} - enviando pro cron");
+                        $webhook_state = 'queued';
                         $this->save_webhook_entry($webhook_data, 'pending_retry', "Falha imediata: {$erro}", null, $webhook_url);
                     }
 
                 } else {
                     error_log("HAPVIDA WEBHOOK: URL NAO CONFIGURADA para grupo {$grupo} - lead {$form_data['lead_id']}");
+                    $webhook_state = 'failed';
                     $this->save_webhook_entry($webhook_data, 'permanent_failure', "URL do webhook nao configurada para grupo {$grupo}");
                 }
 
             } catch (Exception $e) {
                 error_log("HAPVIDA WEBHOOK: EXCECAO para lead " . (isset($form_data['lead_id']) ? $form_data['lead_id'] : 'unknown') . ": " . $e->getMessage());
                 if (isset($webhook_data)) {
+                    $webhook_state = 'queued';
                     $this->save_webhook_entry($webhook_data, 'pending_retry', 'Excecao: ' . $e->getMessage(), null, isset($webhook_url) ? $webhook_url : '');
                 }
             }
@@ -235,7 +247,7 @@ trait FormHandlerTrait {
                 'message' => 'Formulário processado com sucesso! Redirecionando...',
                 'redirect' => $whatsapp_url, // *** MANTÉM COMO ESTAVA ***
                 'whatsapp_url' => $whatsapp_url, // *** ADICIONA APENAS ESTA LINHA EXTRA ***
-                'webhook_status' => $webhook_success ? 'queued' : 'failed',
+                'webhook_status' => $webhook_state,
                 'business_hours' => $is_business_hours,
                 'tracking_enabled' => false,
                 'vendor_info' => array(

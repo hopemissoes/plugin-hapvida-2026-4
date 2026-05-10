@@ -72,9 +72,25 @@ class Formulario_Hapvida_Webhook_Retry {
 
     /**
      * Processa webhooks pendentes de retry
-     * Executado a cada 5 minutos via WP Cron
+     * Executado a cada 2 minutos via WP Cron (efetivo: ~3 min, conforme cron servidor)
      */
     public function process_pending_retries() {
+        // Lock para impedir execuções simultaneas (race condition no update_option)
+        $lock_key = 'hapvida_retry_cron_lock';
+        if (get_transient($lock_key)) {
+            $this->log("Cron de retry ja em execucao - skip");
+            return;
+        }
+        set_transient($lock_key, time(), 300); // 5 min de safety
+
+        try {
+            $this->run_retry_processing();
+        } finally {
+            delete_transient($lock_key);
+        }
+    }
+
+    private function run_retry_processing() {
         $webhooks = get_option($this->failed_webhooks_option, array());
 
         if (empty($webhooks)) {
@@ -163,6 +179,18 @@ class Formulario_Hapvida_Webhook_Retry {
                 $this->log("✅ RETRY SUCESSO: {$lead_id} enviado na tentativa background {$attempt_num}");
 
             } else {
+                $lead_id = isset($webhook['data']['lead_id']) ? $webhook['data']['lead_id'] : 'N/A';
+
+                // Erro definitivo (4xx exceto 408/429) - nao adianta retentar
+                if (!empty($result['definitive'])) {
+                    $webhook['status'] = 'permanent_failure';
+                    $webhook['error'] = "Erro definitivo no retry {$attempt_num}: " . $result['message'] . " - retries cancelados";
+                    error_log("HAPVIDA RETRY: ERRO DEFINITIVO para lead {$lead_id} - {$result['message']} - cancelando retries");
+                    $this->log("❌ ERRO DEFINITIVO: Lead {$lead_id} - {$result['message']} - retries cancelados");
+                    $fail_count++;
+                    continue;
+                }
+
                 // Falhou - calcula próximo retry
                 $retry_schedule = isset($webhook['retry_schedule']) ? $webhook['retry_schedule'] : array(3, 6, 9, 12);
                 $next_interval_index = min($attempt_num, count($retry_schedule) - 1);
@@ -171,7 +199,6 @@ class Formulario_Hapvida_Webhook_Retry {
                 $webhook['next_retry'] = date('Y-m-d H:i:s', strtotime("+{$next_interval} minutes"));
                 $webhook['error'] = "Retry {$attempt_num} falhou: " . $result['message'] . " - Proximo retry em {$next_interval} minutos";
 
-                $lead_id = isset($webhook['data']['lead_id']) ? $webhook['data']['lead_id'] : 'N/A';
                 error_log("HAPVIDA RETRY: FALHA na tentativa {$attempt_num} para lead {$lead_id} - {$result['message']} - Proximo retry: {$webhook['next_retry']}");
 
                 // Se essa era a última tentativa, marca como falha permanente
