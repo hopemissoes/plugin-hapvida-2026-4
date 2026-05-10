@@ -165,11 +165,11 @@ trait FormHandlerTrait {
                 }
 
                 if (!empty($webhook_url)) {
-                    // 1 tentativa rápida com timeout de 5s
+                    // 1 tentativa rápida com timeout de 2s (se falhar, vai pro cron de retry)
                     error_log("HAPVIDA WEBHOOK: Tentativa imediata para lead {$form_data['lead_id']} - grupo {$grupo}");
 
                     $webhook_response = wp_remote_post($webhook_url, array(
-                        'timeout' => 5,
+                        'timeout' => 2,
                         'blocking' => true,
                         'body' => json_encode($webhook_data),
                         'headers' => array(
