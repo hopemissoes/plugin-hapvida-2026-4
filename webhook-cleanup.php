@@ -19,23 +19,70 @@ class Formulario_Hapvida_Webhook_Cleanup {
 
     public function __construct() {
         $this->log_file = WP_CONTENT_DIR . '/formulario_hapvida.log';
-        
-        // Agenda limpeza diária
+
+        // Registra intervalo de 3 horas
+        add_filter('cron_schedules', array($this, 'add_three_hours_interval'));
+
+        // Agenda limpeza diária e a cada 3h
         add_action('init', array($this, 'schedule_cleanup'));
         add_action('formulario_hapvida_daily_cleanup', array($this, 'daily_cleanup'));
-        
+        add_action('formulario_hapvida_cleanup_sent_webhooks', array($this, 'cleanup_sent_webhooks'));
+
+        // AJAX para limpeza manual via admin
+        add_action('wp_ajax_hapvida_clear_sent_webhooks', array($this, 'ajax_clear_sent_webhooks'));
+
         // Hook para desativar o plugin (limpa cron jobs)
         register_deactivation_hook(__FILE__, array($this, 'deactivate_cleanup'));
     }
 
     /**
-     * Agenda a limpeza diária
+     * Adiciona intervalo de 3 horas ao WP Cron
+     */
+    public function add_three_hours_interval($schedules) {
+        if (!isset($schedules['hapvida_three_hours'])) {
+            $schedules['hapvida_three_hours'] = array(
+                'interval' => 10800, // 3 horas
+                'display' => 'A cada 3 horas (Hapvida Cleanup Sent)'
+            );
+        }
+        return $schedules;
+    }
+
+    /**
+     * Agenda limpezas (diaria geral + a cada 3h dos enviados)
      */
     public function schedule_cleanup() {
         if (!wp_next_scheduled('formulario_hapvida_daily_cleanup')) {
             // Executa diariamente à meia-noite
             wp_schedule_event(strtotime('tomorrow'), 'daily', 'formulario_hapvida_daily_cleanup');
         }
+        if (!wp_next_scheduled('formulario_hapvida_cleanup_sent_webhooks')) {
+            // Executa a cada 3 horas a partir de agora
+            wp_schedule_event(time() + 3600, 'hapvida_three_hours', 'formulario_hapvida_cleanup_sent_webhooks');
+        }
+    }
+
+    /**
+     * Remove webhooks com status 'sent' (lead processado com sucesso)
+     */
+    public function cleanup_sent_webhooks() {
+        $result = $this->cleanup_by_status('sent');
+        $this->log("Cleanup automatico de enviados: {$result['removed']} removidos, {$result['remaining']} restantes");
+        return $result;
+    }
+
+    /**
+     * AJAX: Limpa webhooks enviados manualmente
+     */
+    public function ajax_clear_sent_webhooks() {
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => 'Sem permissao'), 403);
+            return;
+        }
+        check_ajax_referer('hapvida_clear_sent_webhooks', 'nonce');
+
+        $result = $this->cleanup_by_status('sent');
+        wp_send_json_success($result);
     }
 
     /**
@@ -252,6 +299,7 @@ class Formulario_Hapvida_Webhook_Cleanup {
      */
     public function deactivate_cleanup() {
         wp_clear_scheduled_hook('formulario_hapvida_daily_cleanup');
+        wp_clear_scheduled_hook('formulario_hapvida_cleanup_sent_webhooks');
         wp_clear_scheduled_hook('formulario_hapvida_retry_webhooks');
     }
 

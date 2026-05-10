@@ -949,6 +949,69 @@ trait AdminPageRendererTrait {
                 <div class="hapvida-tab-panel" data-tab="stats">
                 <div class="hapvida-row">
                     <div class="hapvida-column full-width">
+                        <?php
+                        $all_webhooks = get_option('formulario_hapvida_failed_webhooks', array());
+                        $sent_count = 0;
+                        foreach ($all_webhooks as $w) {
+                            if (isset($w['status']) && $w['status'] === 'sent') {
+                                $sent_count++;
+                            }
+                        }
+                        ?>
+                        <div class="hapvida-card" style="margin-bottom: 20px;">
+                            <h2><i class="dashicons dashicons-trash"></i> Limpeza de Webhooks</h2>
+                            <p class="hapvida-auto-activate-desc" style="margin-bottom: 16px;">
+                                Webhooks com status <strong>"enviado"</strong> (sucesso) ficam salvos para histórico.
+                                Para evitar que a opção do banco cresça muito, eles são removidos automaticamente
+                                <strong>a cada 3 horas</strong> por um cron. Você também pode limpar manualmente abaixo.
+                            </p>
+                            <div style="display: flex; align-items: center; gap: 16px; padding: 14px 18px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px;">
+                                <div style="flex: 1;">
+                                    <strong style="font-size: 16px; color: #334155;">
+                                        <?php echo number_format($sent_count, 0, ',', '.'); ?>
+                                    </strong>
+                                    <span style="color: #64748b;">webhook(s) com status "enviado" na fila</span>
+                                </div>
+                                <button type="button" id="hapvida-clear-sent-webhooks" class="button button-secondary" <?php echo $sent_count === 0 ? 'disabled' : ''; ?>>
+                                    <span class="dashicons dashicons-trash" style="margin-top: 3px;"></span>
+                                    Limpar Enviados Agora
+                                </button>
+                            </div>
+                            <div id="hapvida-clear-sent-result" style="margin-top: 10px;"></div>
+                        </div>
+                        <script>
+                        (function(){
+                            var btn = document.getElementById('hapvida-clear-sent-webhooks');
+                            if (!btn) return;
+                            btn.addEventListener('click', function(){
+                                if (!confirm('Limpar todos os webhooks com status "enviado"?\n\nIsso remove apenas leads ja processados com sucesso. Webhooks pendentes, em retry ou com falha NAO serao afetados.')) return;
+                                btn.disabled = true;
+                                var originalHtml = btn.innerHTML;
+                                btn.innerHTML = '<span class="dashicons dashicons-update spin" style="margin-top: 3px;"></span> Limpando...';
+                                var formData = new FormData();
+                                formData.append('action', 'hapvida_clear_sent_webhooks');
+                                formData.append('nonce', '<?php echo wp_create_nonce("hapvida_clear_sent_webhooks"); ?>');
+                                fetch('<?php echo admin_url("admin-ajax.php"); ?>', { method: 'POST', body: formData })
+                                .then(function(r){ return r.json(); })
+                                .then(function(res){
+                                    var result = document.getElementById('hapvida-clear-sent-result');
+                                    if (res.success) {
+                                        result.innerHTML = '<div class="hapvida-alert success" style="margin: 0;"><strong>' + res.data.removed + ' webhook(s) removido(s).</strong> Restam ' + res.data.remaining + ' na fila.</div>';
+                                        setTimeout(function(){ location.reload(); }, 1500);
+                                    } else {
+                                        result.innerHTML = '<div class="hapvida-alert error" style="margin: 0;">Erro: ' + (res.data && res.data.message ? res.data.message : 'desconhecido') + '</div>';
+                                        btn.disabled = false;
+                                        btn.innerHTML = originalHtml;
+                                    }
+                                })
+                                .catch(function(){
+                                    document.getElementById('hapvida-clear-sent-result').innerHTML = '<div class="hapvida-alert error" style="margin: 0;">Erro de conexao</div>';
+                                    btn.disabled = false;
+                                    btn.innerHTML = originalHtml;
+                                });
+                            });
+                        })();
+                        </script>
                         <?php $this->render_daily_submissions_section(); ?>
                     </div>
                 </div>
