@@ -476,6 +476,9 @@ trait AdminScriptsTrait {
                                                     return;
                                                 }
 
+                                                // Atualiza o card "Total de Leads"
+                                                $('#leads-stats-total').text(leads.length);
+
                                                 if (leads.length === 0) {
                                                     tbody.html('<tr><td colspan="7" style="text-align:center;">Nenhum lead registrado</td></tr>');
                                                 } else {

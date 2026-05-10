@@ -633,7 +633,7 @@ trait AdminShortcodeTrait {
                 }
 
                 var autoRefreshInterval = null;
-                var refreshInterval = 30000; // 30 segundos
+                var refreshInterval = 10000; // 10 segundos
 
                 // Função para atualizar as contagens
                 function updateCounts() {
@@ -743,7 +743,7 @@ trait AdminShortcodeTrait {
                     // Carrega dados iniciais
                     updateCounts();
 
-                    // Auto-refresh a cada 30 segundos
+                    // Auto-refresh a cada 10 segundos
                     autoRefreshInterval = setInterval(function () {
                         console.log('⏰ Auto-refresh...');
                         updateCounts();
@@ -830,7 +830,7 @@ trait AdminShortcodeTrait {
         // Cards de estatísticas
         echo '<div class="webhook-stats">';
         echo '<div class="webhook-stat-card total">';
-        echo '<div class="webhook-stat-number status-total">' . $stats['total'] . '</div>';
+        echo '<div class="webhook-stat-number status-total" id="leads-stats-total">' . $stats['total'] . '</div>';
         echo '<div class="webhook-stat-label">Total de Leads</div>';
         echo '</div>';
 

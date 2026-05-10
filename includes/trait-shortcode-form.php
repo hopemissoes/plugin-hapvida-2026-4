@@ -1230,6 +1230,20 @@ trait ShortcodeFormTrait {
                                 if (window.hapvidaPopupReady) return;
                                 window.hapvidaPopupReady = true;
 
+                                // Garante que todos os elementos do formulario tenham a classe 'no-lazy'
+                                // (evita lazy load de plugins externos em qualquer item do form)
+                                function applyNoLazyToForm() {
+                                    document.querySelectorAll('.hapvida-form-container, .hapvida-form-container *').forEach(function (el) {
+                                        if (!el.classList.contains('no-lazy')) {
+                                            el.classList.add('no-lazy');
+                                        }
+                                    });
+                                }
+                                applyNoLazyToForm();
+                                if (document.readyState === 'loading') {
+                                    document.addEventListener('DOMContentLoaded', applyNoLazyToForm);
+                                }
+
                                 var isSubmitted = false;
 
                                 // ====================================================================
