@@ -30,6 +30,7 @@ class Formulario_Hapvida_Webhook_Cleanup {
 
         // AJAX para limpeza manual via admin
         add_action('wp_ajax_hapvida_clear_sent_webhooks', array($this, 'ajax_clear_sent_webhooks'));
+        add_action('wp_ajax_hapvida_clear_pending_webhooks', array($this, 'ajax_clear_pending_webhooks'));
 
         // Hook para desativar o plugin (limpa cron jobs)
         register_deactivation_hook(__FILE__, array($this, 'deactivate_cleanup'));
@@ -82,6 +83,45 @@ class Formulario_Hapvida_Webhook_Cleanup {
         check_ajax_referer('hapvida_clear_sent_webhooks', 'nonce');
 
         $result = $this->cleanup_by_status('sent');
+        wp_send_json_success($result);
+    }
+
+    /**
+     * Remove TODOS os webhooks com status 'pending' ou 'pending_retry'
+     * (uteis quando ha leads pendentes antigos que nao serao mais reenviados)
+     */
+    public function cleanup_pending_webhooks() {
+        $failed_webhooks = get_option($this->failed_webhooks_option, array());
+        $original_count = count($failed_webhooks);
+
+        $cleaned_webhooks = array_filter($failed_webhooks, function($webhook) {
+            $status = isset($webhook['status']) ? $webhook['status'] : '';
+            return $status !== 'pending' && $status !== 'pending_retry';
+        });
+
+        $removed_count = $original_count - count($cleaned_webhooks);
+        if ($removed_count > 0) {
+            update_option($this->failed_webhooks_option, array_values($cleaned_webhooks));
+            $this->log("Limpeza pendentes manual: {$removed_count} removidos, " . count($cleaned_webhooks) . " restantes");
+        }
+
+        return array(
+            'removed' => $removed_count,
+            'remaining' => count($cleaned_webhooks)
+        );
+    }
+
+    /**
+     * AJAX: Limpa webhooks pendentes (pending + pending_retry)
+     */
+    public function ajax_clear_pending_webhooks() {
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => 'Sem permissao'), 403);
+            return;
+        }
+        check_ajax_referer('hapvida_clear_pending_webhooks', 'nonce');
+
+        $result = $this->cleanup_pending_webhooks();
         wp_send_json_success($result);
     }
 

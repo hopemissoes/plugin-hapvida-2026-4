@@ -952,9 +952,13 @@ trait AdminPageRendererTrait {
                         <?php
                         $all_webhooks = get_option('formulario_hapvida_failed_webhooks', array());
                         $sent_count = 0;
+                        $pending_count = 0;
                         foreach ($all_webhooks as $w) {
-                            if (isset($w['status']) && $w['status'] === 'sent') {
+                            $status = isset($w['status']) ? $w['status'] : '';
+                            if ($status === 'sent') {
                                 $sent_count++;
+                            } elseif ($status === 'pending' || $status === 'pending_retry') {
+                                $pending_count++;
                             }
                         }
                         ?>
@@ -978,6 +982,27 @@ trait AdminPageRendererTrait {
                                 </button>
                             </div>
                             <div id="hapvida-clear-sent-result" style="margin-top: 10px;"></div>
+
+                            <hr style="margin: 20px 0; border: none; border-top: 1px solid #e2e8f0;">
+
+                            <p class="hapvida-auto-activate-desc" style="margin-bottom: 16px;">
+                                <strong>Webhooks pendentes</strong> (status "pending" ou "pending_retry") sao leads
+                                aguardando reenvio pelo cron. Use este botao para descartar leads antigos que
+                                voce nao quer mais que sejam reenviados.
+                            </p>
+                            <div style="display: flex; align-items: center; gap: 16px; padding: 14px 18px; background: #fff7ed; border: 1px solid #fed7aa; border-radius: 10px;">
+                                <div style="flex: 1;">
+                                    <strong style="font-size: 16px; color: #92400e;">
+                                        <?php echo number_format($pending_count, 0, ',', '.'); ?>
+                                    </strong>
+                                    <span style="color: #92400e;">webhook(s) pendente(s) na fila</span>
+                                </div>
+                                <button type="button" id="hapvida-clear-pending-webhooks" class="button" style="color: #b45309; border-color: #fcd34d; background: #fef3c7;" <?php echo $pending_count === 0 ? 'disabled' : ''; ?>>
+                                    <span class="dashicons dashicons-trash" style="margin-top: 3px;"></span>
+                                    Descartar Pendentes
+                                </button>
+                            </div>
+                            <div id="hapvida-clear-pending-result" style="margin-top: 10px;"></div>
                         </div>
                         <script>
                         (function(){
@@ -1010,6 +1035,38 @@ trait AdminPageRendererTrait {
                                     btn.innerHTML = originalHtml;
                                 });
                             });
+
+                            // Botao "Descartar Pendentes"
+                            var btnPending = document.getElementById('hapvida-clear-pending-webhooks');
+                            if (btnPending) {
+                                btnPending.addEventListener('click', function(){
+                                    if (!confirm('Descartar TODOS os webhooks com status "pending" ou "pending_retry"?\n\nLeads pendentes serao perdidos definitivamente e NAO serao reenviados.\nEsta acao nao pode ser desfeita.')) return;
+                                    btnPending.disabled = true;
+                                    var origHtml = btnPending.innerHTML;
+                                    btnPending.innerHTML = '<span class="dashicons dashicons-update spin" style="margin-top: 3px;"></span> Descartando...';
+                                    var formData = new FormData();
+                                    formData.append('action', 'hapvida_clear_pending_webhooks');
+                                    formData.append('nonce', '<?php echo wp_create_nonce("hapvida_clear_pending_webhooks"); ?>');
+                                    fetch('<?php echo admin_url("admin-ajax.php"); ?>', { method: 'POST', body: formData })
+                                    .then(function(r){ return r.json(); })
+                                    .then(function(res){
+                                        var result = document.getElementById('hapvida-clear-pending-result');
+                                        if (res.success) {
+                                            result.innerHTML = '<div class="hapvida-alert success" style="margin: 0;"><strong>' + res.data.removed + ' webhook(s) pendente(s) descartado(s).</strong> Restam ' + res.data.remaining + ' na fila.</div>';
+                                            setTimeout(function(){ location.reload(); }, 1500);
+                                        } else {
+                                            result.innerHTML = '<div class="hapvida-alert error" style="margin: 0;">Erro: ' + (res.data && res.data.message ? res.data.message : 'desconhecido') + '</div>';
+                                            btnPending.disabled = false;
+                                            btnPending.innerHTML = origHtml;
+                                        }
+                                    })
+                                    .catch(function(){
+                                        document.getElementById('hapvida-clear-pending-result').innerHTML = '<div class="hapvida-alert error" style="margin: 0;">Erro de conexao</div>';
+                                        btnPending.disabled = false;
+                                        btnPending.innerHTML = origHtml;
+                                    });
+                                });
+                            }
                         })();
                         </script>
                         <?php $this->render_daily_submissions_section(); ?>

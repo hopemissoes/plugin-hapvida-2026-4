@@ -1025,7 +1025,7 @@ trait ShortcodeFormTrait {
                 </style>
 
                 <!-- HTML DO FORMULARIO -->
-                <div class="hapvida-form-container no-lazy">
+                <div class="hapvida-form-container">
                     <?php if (!$sem_titulo): ?>
                     <div class="hapvida-form-header">
                         <div class="hapvida-form-title">
@@ -1038,7 +1038,7 @@ trait ShortcodeFormTrait {
                         </div>
                     </div>
                     <?php endif; ?>
-                    <form class="hapvida-form no-lazy" id="hapvida-main-form">
+                    <form class="hapvida-form" id="hapvida-main-form">
                         <!-- Nome Completo -->
                         <div class="hapvida-field" id="hapvida-field-name">
                             <span class="hapvida-field-icon">
@@ -1125,7 +1125,7 @@ trait ShortcodeFormTrait {
                                 <input type="number" id="hapvida-qtd-pessoas" name="form_fields[qtd_pessoas]"
                                     placeholder="Nº Pessoas" value="1" min="1" max="20" required autocomplete="off">
                             </div>
-                            <div class="age-inputs no-lazy" id="hapvida-age-inputs">
+                            <div class="age-inputs" id="hapvida-age-inputs">
                                 <div class="hapvida-field">
                                     <span class="hapvida-field-icon">
                                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1146,7 +1146,7 @@ trait ShortcodeFormTrait {
                         <input type="hidden" name="form_fields[atendente]" value="">
 
                         <!-- Botão de Envio -->
-                        <button type="submit" class="hapvida-submit-btn no-lazy" id="hapvida-submit-btn">
+                        <button type="submit" class="hapvida-submit-btn" id="hapvida-submit-btn">
                             <span class="hapvida-btn-text">Solicitar Cotação</span>
                         </button>
 
@@ -1162,20 +1162,20 @@ trait ShortcodeFormTrait {
                 </div>
 
                 <!-- NOVO MODAL DE SUCESSO MELHORADO -->
-                <div id="hapvida-success-modal" class="hapvida-modal-success no-lazy">
+                <div id="hapvida-success-modal" class="hapvida-modal-success">
                     <div class="hapvida-modal-success-content">
                         <div class="hapvida-modal-success-header">
                             <div class="hapvida-success-check">
                                 <div class="hapvida-success-check-circle">
-                                    <i class="fas fa-check hapvida-success-check-icon no-lazy"></i>
+                                    <i class="fas fa-check hapvida-success-check-icon"></i>
                                 </div>
                             </div>
                             <h3 class="hapvida-modal-success-title" style="color: white;">
                                 Formulário Enviado com Sucesso!
                             </h3>
 
-                            <button type="button" class="hapvida-modal-success-close no-lazy" id="hapvida-modal-close">
-                                <i class="fas fa-times no-lazy"></i>
+                            <button type="button" class="hapvida-modal-success-close" id="hapvida-modal-close">
+                                <i class="fas fa-times"></i>
                             </button>
                         </div>
 
@@ -1188,7 +1188,7 @@ trait ShortcodeFormTrait {
 
                             <div class="hapvida-whatsapp-redirect">
                                 <div class="hapvida-whatsapp-content">
-                                    <i class="fab fa-whatsapp hapvida-whatsapp-icon no-lazy"></i>
+                                    <i class="fab fa-whatsapp hapvida-whatsapp-icon"></i>
                                     <span id="hapvida-redirect-text">
                                         Redirecionando para WhatsApp
                                         <span class="hapvida-loading-dots">
@@ -1229,20 +1229,6 @@ trait ShortcodeFormTrait {
                                 // Evita múltipla inicialização
                                 if (window.hapvidaPopupReady) return;
                                 window.hapvidaPopupReady = true;
-
-                                // Garante que todos os elementos do formulario tenham a classe 'no-lazy'
-                                // (evita lazy load de plugins externos em qualquer item do form)
-                                function applyNoLazyToForm() {
-                                    document.querySelectorAll('.hapvida-form-container, .hapvida-form-container *').forEach(function (el) {
-                                        if (!el.classList.contains('no-lazy')) {
-                                            el.classList.add('no-lazy');
-                                        }
-                                    });
-                                }
-                                applyNoLazyToForm();
-                                if (document.readyState === 'loading') {
-                                    document.addEventListener('DOMContentLoaded', applyNoLazyToForm);
-                                }
 
                                 var isSubmitted = false;
 
@@ -1523,18 +1509,18 @@ trait ShortcodeFormTrait {
                                     $('#hapvida-improved-modal').remove();
 
                                     const modalHtml = `
-            <div id="hapvida-improved-modal" class="hapvida-modal-success show no-lazy" style="z-index: 999999;">
+            <div id="hapvida-improved-modal" class="hapvida-modal-success show" style="z-index: 999999;">
                 <div class="hapvida-modal-success-content" style="max-width: 500px;">
                     <div class="hapvida-modal-success-header" style="background: ${color.bg}; color: ${color.text};">
                         <h3 style="margin: 0; font-size: 18px;">${title}</h3>
-                        <button type="button" class="hapvida-modal-success-close hapvida-close-btn no-lazy">
-                            <i class="fas fa-times no-lazy"></i>
+                        <button type="button" class="hapvida-modal-success-close hapvida-close-btn">
+                            <i class="fas fa-times"></i>
                         </button>
                     </div>
                     <div class="hapvida-modal-success-body">
                         ${message}
                         <div style="text-align: center; margin-top: 20px;">
-                            <button type="button" class="hapvida-close-btn no-lazy" 
+                            <button type="button" class="hapvida-close-btn" 
                                     style="background: ${color.bg}; color: ${color.text}; border: none; padding: 12px 30px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px;">
                                 Entendi
                             </button>

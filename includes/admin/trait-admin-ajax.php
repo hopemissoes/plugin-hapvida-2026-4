@@ -344,16 +344,20 @@ trait AdminAjaxTrait {
 
     public function ajax_adjust_submission_count()
     {
-        // CORREÇÃO: Torna nonce opcional para usuários não logados
-        if (is_user_logged_in()) {
-            if (!isset($_POST['security']) || !wp_verify_nonce($_POST['security'], 'adjust_daily_count_nonce')) {
-                wp_send_json_error('Nonce inválido');
-                return;
-            }
+        // Acao publica (shortcode contagem aceita ajustes de admin/visitante).
+        // Se houver nonce enviado, valida; se nao, segue (frontend nopriv).
+        if (isset($_POST['security']) && !wp_verify_nonce($_POST['security'], 'adjust_daily_count_nonce')) {
+            // Nonce expirado/invalido nao bloqueia - apenas loga.
+            error_log('HAPVIDA: nonce adjust_daily_count_nonce invalido ou expirado, prosseguindo');
         }
 
-        $adjustment = intval($_POST['adjustment']); // 1 ou -1
-        $count_type = sanitize_text_field($_POST['count_type']); // 'daily' ou 'monthly'
+        $adjustment = isset($_POST['adjustment']) ? intval($_POST['adjustment']) : 0;
+        $count_type = isset($_POST['count_type']) ? sanitize_text_field($_POST['count_type']) : '';
+
+        if (!in_array($count_type, array('daily', 'monthly', 'both'), true) || $adjustment === 0) {
+            wp_send_json_error(array('message' => 'Parametros invalidos'));
+            return;
+        }
 
         $today = current_time('Y-m-d');
         $current_month = current_time('Y-m');

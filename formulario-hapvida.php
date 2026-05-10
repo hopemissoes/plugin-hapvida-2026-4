@@ -98,9 +98,8 @@ class Formulario_Hapvida
 
         $this->ensure_timezone_configured();
 
-        // *** CORREÇÃO CRÍTICA: Adiciona actions AJAX para frontend ***
-        add_action('wp_ajax_adjust_submission_count', array($this, 'ajax_adjust_submission_count'));
-        add_action('wp_ajax_nopriv_adjust_submission_count', array($this, 'ajax_adjust_submission_count'));
+        // Handler de adjust_submission_count fica somente em Formulario_Hapvida_Admin
+        // (admin-page.php) para evitar conflito de hooks duplicados.
 
         add_action('wp_ajax_get_pending_webhooks', array($this, 'ajax_get_pending_webhooks'));
         add_action('wp_ajax_nopriv_get_pending_webhooks', array($this, 'ajax_get_pending_webhooks'));
