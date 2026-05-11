@@ -20,10 +20,10 @@ class Formulario_Hapvida_Webhook_Cleanup {
     public function __construct() {
         $this->log_file = WP_CONTENT_DIR . '/formulario_hapvida.log';
 
-        // Registra intervalo de 3 horas
-        add_filter('cron_schedules', array($this, 'add_three_hours_interval'));
+        // Registra intervalo de 12 horas
+        add_filter('cron_schedules', array($this, 'add_twelve_hours_interval'));
 
-        // Agenda limpeza diária e a cada 3h
+        // Agenda limpeza diária e a cada 12h
         add_action('init', array($this, 'schedule_cleanup'));
         add_action('formulario_hapvida_daily_cleanup', array($this, 'daily_cleanup'));
         add_action('formulario_hapvida_cleanup_sent_webhooks', array($this, 'cleanup_sent_webhooks'));
@@ -37,29 +37,42 @@ class Formulario_Hapvida_Webhook_Cleanup {
     }
 
     /**
-     * Adiciona intervalo de 3 horas ao WP Cron
+     * Adiciona intervalo de 12 horas ao WP Cron
      */
-    public function add_three_hours_interval($schedules) {
-        if (!isset($schedules['hapvida_three_hours'])) {
-            $schedules['hapvida_three_hours'] = array(
-                'interval' => 10800, // 3 horas
-                'display' => 'A cada 3 horas (Hapvida Cleanup Sent)'
+    public function add_twelve_hours_interval($schedules) {
+        if (!isset($schedules['hapvida_twelve_hours'])) {
+            $schedules['hapvida_twelve_hours'] = array(
+                'interval' => 43200, // 12 horas
+                'display' => 'A cada 12 horas (Hapvida Cleanup Sent)'
             );
         }
         return $schedules;
     }
 
     /**
-     * Agenda limpezas (diaria geral + a cada 3h dos enviados)
+     * Agenda limpezas (diaria geral + a cada 12h dos enviados)
+     *
+     * Migracao: se houver um evento agendado com o intervalo/recurrence antigo
+     * (hapvida_three_hours ou interval = 10800), reagenda com o novo de 12h.
      */
     public function schedule_cleanup() {
         if (!wp_next_scheduled('formulario_hapvida_daily_cleanup')) {
             // Executa diariamente à meia-noite
             wp_schedule_event(strtotime('tomorrow'), 'daily', 'formulario_hapvida_daily_cleanup');
         }
+
+        // Migra cron antigo (3h) para o novo (12h) se necessario
+        if (function_exists('wp_get_scheduled_event')) {
+            $event = wp_get_scheduled_event('formulario_hapvida_cleanup_sent_webhooks');
+            if ($event && ($event->schedule !== 'hapvida_twelve_hours' || (isset($event->interval) && intval($event->interval) !== 43200))) {
+                wp_clear_scheduled_hook('formulario_hapvida_cleanup_sent_webhooks');
+                $this->log("Cron de cleanup_sent_webhooks migrado para intervalo de 12h");
+            }
+        }
+
         if (!wp_next_scheduled('formulario_hapvida_cleanup_sent_webhooks')) {
-            // Executa a cada 3 horas a partir de agora
-            wp_schedule_event(time() + 3600, 'hapvida_three_hours', 'formulario_hapvida_cleanup_sent_webhooks');
+            // Executa a cada 12 horas a partir de agora
+            wp_schedule_event(time() + 3600, 'hapvida_twelve_hours', 'formulario_hapvida_cleanup_sent_webhooks');
         }
     }
 

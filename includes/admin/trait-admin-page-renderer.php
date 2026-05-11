@@ -967,7 +967,7 @@ trait AdminPageRendererTrait {
                             <p class="hapvida-auto-activate-desc" style="margin-bottom: 16px;">
                                 Webhooks com status <strong>"enviado"</strong> (sucesso) ficam salvos para histórico.
                                 Para evitar que a opção do banco cresça muito, eles são removidos automaticamente
-                                <strong>a cada 3 horas</strong> por um cron. Você também pode limpar manualmente abaixo.
+                                <strong>a cada 12 horas</strong> por um cron. Você também pode limpar manualmente abaixo.
                             </p>
                             <div style="display: flex; align-items: center; gap: 16px; padding: 14px 18px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px;">
                                 <div style="flex: 1;">
