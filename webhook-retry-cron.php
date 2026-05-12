@@ -297,15 +297,9 @@ class Formulario_Hapvida_Webhook_Retry {
             return $webhook['webhook_url'];
         }
 
-        // Fallback: determina pela configuração do grupo
+        // Fallback: URL unica da configuracao
         $options = get_option($this->settings_option_name);
-        $grupo = isset($webhook['data']['grupo']) ? $webhook['data']['grupo'] : 'drv';
-
-        if ($grupo === 'drv') {
-            return isset($options['webhook_url_drv']) ? $options['webhook_url_drv'] : '';
-        } else {
-            return isset($options['webhook_url_seu_souza']) ? $options['webhook_url_seu_souza'] : '';
-        }
+        return isset($options['webhook_url']) ? $options['webhook_url'] : '';
     }
 
     /**

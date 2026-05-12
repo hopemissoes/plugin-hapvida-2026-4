@@ -2571,45 +2571,6 @@ trait AdminPageRendererTrait {
                             });
                         }
 
-
-                        public function ajax_clear_vendor_stats() {
-                            // Verifica nonce
-                            if (!isset($_POST['security']) || !wp_verify_nonce($_POST['security'], 'clear_vendor_stats_nonce')) {
-                                wp_send_json_error('Nonce inválido');
-                                return;
-                            }
-
-                            // Verifica permissões
-                            if (!current_user_can('manage_options')) {
-                                wp_send_json_error('Permissão negada');
-                                return;
-                            }
-
-                            // Limpa a option de atividades
-                            $activity_option = 'formulario_hapvida_vendor_activity';
-                            $activities_before = get_option($activity_option, array());
-                            $count_before = count($activities_before);
-
-                            // Remove a option
-                            $result = delete_option($activity_option);
-
-                            // Limpa do cache
-                            wp_cache_delete($activity_option, 'options');
-
-                            // Log da ação
-                            error_log("HAPVIDA: Estatísticas de vendedores limpas - {$count_before} registros removidos");
-
-                            if ($result || $count_before == 0) {
-                                wp_send_json_success(array(
-                                    'message' => "Estatísticas limpas com sucesso! {$count_before} registros removidos.",
-                                    'removed_count' => $count_before
-                                ));
-                            } else {
-                                wp_send_json_error('Falha ao limpar estatísticas');
-                            }
-                        }
-
-
                         function renderPendingWebhooks(webhooks) {
                             var container = $('#pending-webhooks-container');
 

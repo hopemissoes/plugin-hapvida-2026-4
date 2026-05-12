@@ -18,44 +18,17 @@ trait AjaxHandlersTrait {
         $options = get_option('formulario_hapvida_settings');
 
         if (!$options || !is_array($options)) {
-            $debug_info .= "âŒ ERRO CRÃTICO: Opções do plugin não encontradas!\n";
-            wp_send_json_success(array('validation_info' => $debug_info));
+            wp_send_json_success(array('validation_info' => $debug_info . "ERRO: Opcoes do plugin nao encontradas\n"));
             return;
         }
 
-        $webhook_configs = array(
-            'webhook_url_drv' => 'DRV - Primeiro Envio',
-            'webhook_url_drv_confirmation' => 'DRV - Confirmação',
-            'webhook_url_seu_souza' => 'Seu Souza - Primeiro Envio',
-            'webhook_url_seu_souza_confirmation' => 'Seu Souza - Confirmação'
-        );
-
-        $valid_configs = 0;
-        $total_configs = count($webhook_configs);
-
-        foreach ($webhook_configs as $key => $description) {
-            $url = isset($options[$key]) ? trim($options[$key]) : '';
-
-            if (empty($url)) {
-                $debug_info .= "âš ï¸ {$description}: NÃO CONFIGURADO\n";
-            } else if (!filter_var($url, FILTER_VALIDATE_URL)) {
-                $debug_info .= "âŒ {$description}: URL INVÃLIDA - {$url}\n";
-            } else {
-                $debug_info .= "✅ {$description}: OK - " . substr($url, 0, 50) . "...\n";
-                $valid_configs++;
-            }
-        }
-
-        $debug_info .= "\nðŸ“Š RESUMO: {$valid_configs}/{$total_configs} configurações válidas\n\n";
-
-        // Valida configurações obrigatórias
-        $required_drv = isset($options['webhook_url_drv']) && !empty(trim($options['webhook_url_drv']));
-
-        if (!$required_drv) {
-            $debug_info .= "âŒ ERRO CRÃTICO: Nenhuma URL de webhook configurada para DRV!\n";
-            $debug_info .= "   É necessário configurar pelo menos uma URL para o grupo DRV.\n";
+        $url = isset($options['webhook_url']) ? trim($options['webhook_url']) : '';
+        if (empty($url)) {
+            $debug_info .= "URL do Webhook: NAO CONFIGURADO\n";
+        } elseif (!filter_var($url, FILTER_VALIDATE_URL)) {
+            $debug_info .= "URL do Webhook: INVALIDA - {$url}\n";
         } else {
-            $debug_info .= "✅ Configurações básicas OK para DRV\n";
+            $debug_info .= "URL do Webhook: OK - " . substr($url, 0, 50) . "...\n";
         }
 
         wp_send_json_success(array('validation_info' => $debug_info));
@@ -101,28 +74,11 @@ trait AjaxHandlersTrait {
 
         // Valida configurações de webhook
         $options = get_option('formulario_hapvida_settings');
-        $grupo = $lead['grupo'];
-
-        $debug_info .= "ðŸ”§ CONFIGURAÇÃ•ES DE WEBHOOK:\n";
-
-        if ($grupo === 'drv') {
-            $webhook_url = isset($options['webhook_url_drv']) ? $options['webhook_url_drv'] : '';
-
-            $debug_info .= "   - URL DRV: " . (isset($options['webhook_url_drv']) ?
-                substr($options['webhook_url_drv'], 0, 50) . "..." : 'NÃO CONFIGURADO') . "\n";
-
-        } elseif ($grupo === 'seu_souza') {
-            $webhook_url = isset($options['webhook_url_seu_souza']) ? $options['webhook_url_seu_souza'] : '';
-
-            $debug_info .= "   - URL Seu Souza: " . (isset($options['webhook_url_seu_souza']) ?
-                substr($options['webhook_url_seu_souza'], 0, 50) . "..." : 'NÃO CONFIGURADO') . "\n";
-        }
-
+        $webhook_url = isset($options['webhook_url']) ? $options['webhook_url'] : '';
         if (!empty($webhook_url)) {
-            $debug_info .= "\n✅ URL de webhook encontrada\n";
-            $debug_info .= "🔍 URL que será usada: " . substr($webhook_url, 0, 50) . "...\n";
+            $debug_info .= "URL do Webhook: " . substr($webhook_url, 0, 50) . "...\n";
         } else {
-            $debug_info .= "\nâŒ ERRO: Nenhuma URL de webhook configurada para grupo {$grupo}\n";
+            $debug_info .= "URL do Webhook: NAO CONFIGURADO\n";
         }
 
         wp_send_json_success(array('debug_info' => $debug_info));
