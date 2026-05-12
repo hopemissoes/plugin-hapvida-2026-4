@@ -1161,7 +1161,7 @@ trait ShortcodeFormTrait {
                     </form>
                 </div>
 
-                <!-- NOVO MODAL DE SUCESSO MELHORADO -->
+                <!-- MODAL DE SUCESSO -->
                 <div id="hapvida-success-modal" class="hapvida-modal-success">
                     <div class="hapvida-modal-success-content">
                         <div class="hapvida-modal-success-header">
@@ -1182,42 +1182,9 @@ trait ShortcodeFormTrait {
                         <div class="hapvida-modal-success-body">
                             <p class="hapvida-success-main-message">
                                 <strong>Parabéns!</strong> Seus dados foram recebidos.<br>
-                                Você <span class="hapvida-success-highlight">receberá sua cotação</span>
-                                através de um dos nossos consultores especializados em instantes!
+                                Em <span class="hapvida-success-highlight">alguns instantes</span>
+                                nossos consultores entrarão em contato com você!
                             </p>
-
-                            <div class="hapvida-whatsapp-redirect">
-                                <div class="hapvida-whatsapp-content">
-                                    <i class="fab fa-whatsapp hapvida-whatsapp-icon"></i>
-                                    <span id="hapvida-redirect-text">
-                                        Redirecionando para WhatsApp
-                                        <span class="hapvida-loading-dots">
-                                            <span></span>
-                                            <span></span>
-                                            <span></span>
-                                        </span>
-                                    </span>
-                                </div>
-
-                                <!-- NOVO: Link clicável para WhatsApp -->
-                                <div id="hapvida-whatsapp-link-container" style="display: none; margin-top: 15px; text-align: center;">
-                                    <p style="font-size: 14px; color: #666; margin-bottom: 10px;">
-                                        <strong>Não redirecionou automaticamente?</strong><br>
-                                        Clique no botão abaixo para falar com nosso consultor:
-                                    </p>
-                                    <a href="#" id="hapvida-whatsapp-link" target="_blank" style="display: inline-block; background: #25D366; color: white; 
-                              padding: 12px 24px; border-radius: 12px; text-decoration: none; 
-                              font-weight: 600; font-size: 15px; transition: all 0.3s ease;
-                              box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3);">
-                                        <i class="fab fa-whatsapp" style="margin-right: 8px;"></i>
-                                        Abrir WhatsApp
-                                    </a>
-                                </div>
-                            </div>
-
-                            <div class="hapvida-countdown">
-                                Redirecionamento em <span class="hapvida-countdown-number">5</span> segundos
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -1232,138 +1199,24 @@ trait ShortcodeFormTrait {
 
                                 var isSubmitted = false;
 
-                                // ====================================================================
-                                // NOVA FUNÇÃO DO MODAL DE SUCESSO MELHORADO
-                                // ====================================================================
-                                window.showSuccessModal = function (redirectUrl) {
-                                    console.log('ðŸŽ‰ Mostrando modal de sucesso melhorado');
-
-                                    // Remove qualquer modal anterior
+                                // Modal de sucesso (sem redirecionamento - so aviso ao usuario)
+                                window.showSuccessModal = function () {
                                     $('.hapvida-modal-success').removeClass('show zoom-entrance');
-
-                                    // Adiciona classe ao body para prevenir scroll
                                     $('body').addClass('modal-open');
 
-                                    // Pega o modal
                                     var $modal = $('#hapvida-success-modal');
+                                    if ($modal.length === 0) return;
 
-                                    // Verifica se o modal existe
-                                    if ($modal.length === 0) {
-                                        console.error('âŒ Modal de sucesso não encontrado no DOM');
-                                        // Fallback: redireciona direto
-                                        if (redirectUrl) {
-                                            setTimeout(function () {
-                                                window.open(redirectUrl, '_blank');
-                                            }, 500);
-                                        }
-                                        return;
-                                    }
-
-                                    // Configura o link do WhatsApp
-                                    $('#hapvida-whatsapp-link').attr('href', redirectUrl);
-
-                                    // Adiciona classes para mostrar com animação
                                     setTimeout(function () {
                                         $modal.addClass('show zoom-entrance');
                                     }, 10);
 
-                                    // Configuração do countdown
-                                    var countdown = 2;
-                                    var $countdownNumber = $('.hapvida-countdown-number');
-                                    var popupBlocked = false;
-
-                                    // Limpa qualquer interval anterior
-                                    if (window.hapvidaCountdownInterval) {
-                                        clearInterval(window.hapvidaCountdownInterval);
-                                    }
-
-                                    // Atualiza countdown
-                                    window.hapvidaCountdownInterval = setInterval(function () {
-                                        countdown--;
-
-                                        if (countdown > 0) {
-                                            $countdownNumber.text(countdown);
-
-                                            // Adiciona efeito de pulse no número
-                                            $countdownNumber.css('transform', 'scale(1.2)');
-                                            setTimeout(function () {
-                                                $countdownNumber.css('transform', 'scale(1)');
-                                            }, 200);
-                                        } else {
-                                            // Para o countdown
-                                            clearInterval(window.hapvidaCountdownInterval);
-
-                                            // Tenta redirecionar para WhatsApp
-                                            if (redirectUrl) {
-                                                console.log('ðŸ“± Tentando abrir WhatsApp:', redirectUrl);
-
-                                                // Tenta abrir o popup
-                                                var newWindow = window.open(redirectUrl, '_blank');
-
-                                                // Detecta se o popup foi bloqueado
-                                                setTimeout(function () {
-                                                    try {
-                                                        if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
-                                                            // Popup foi bloqueado
-                                                            popupBlocked = true;
-                                                            console.log('ðŸš« Popup bloqueado - mostrando link alternativo');
-
-                                                            // Mostra mensagem alternativa
-                                                            $('#hapvida-redirect-text').html(
-                                                                '<i class="fas fa-exclamation-circle" style="color: #f59e0b; margin-right: 8px;"></i>' +
-                                                                '<strong style="color: #dc2626;">Popup bloqueado pelo navegador</strong>'
-                                                            );
-
-                                                            // Esconde o countdown
-                                                            $('.hapvida-countdown').fadeOut(300);
-
-                                                            // Mostra o link clicável
-                                                            $('#hapvida-whatsapp-link-container').slideDown(400);
-
-                                                            // NÃO fecha o modal - mantém aberto para o usuário clicar
-                                                            console.log('✅ Modal mantido aberto para clique manual');
-
-                                                        } else {
-                                                            // Popup abriu com sucesso
-                                                            console.log('✅ WhatsApp aberto com sucesso');
-
-                                                            // Fecha o modal após redirecionamento bem-sucedido
-                                                            setTimeout(function () {
-                                                                closeSuccessModal();
-                                                            }, 5000);
-                                                        }
-                                                    } catch (e) {
-                                                        // Erro ao verificar popup - assume bloqueio
-                                                        popupBlocked = true;
-                                                        console.log('âš ï¸ Erro ao verificar popup - assumindo bloqueio');
-
-                                                        $('#hapvida-redirect-text').html(
-                                                            '<i class="fas fa-exclamation-circle" style="color: #f59e0b; margin-right: 8px;"></i>' +
-                                                            '<strong style="color: #dc2626;">Não foi possível abrir automaticamente</strong>'
-                                                        );
-
-                                                        $('.hapvida-countdown').fadeOut(300);
-                                                        $('#hapvida-whatsapp-link-container').slideDown(400);
-                                                    }
-                                                }, 100);
-                                            }
-                                        }
-                                    }, 1000);
-
-                                    // Som de sucesso (opcional)
-                                    try {
-                                        playSuccessSound();
-                                    } catch (e) {
-                                        // Ignora erro de áudio
-                                    }
-
-                                    // Vibração no mobile (opcional)
+                                    try { if (typeof playSuccessSound === 'function') playSuccessSound(); } catch (e) {}
                                     if ('vibrate' in navigator) {
                                         navigator.vibrate([100, 50, 100]);
                                     }
                                 };
 
-                                // Função para fechar o modal de sucesso
                                 window.closeSuccessModal = function () {
                                     console.log('ðŸ”š Fechando modal de sucesso');
 
@@ -1879,33 +1732,12 @@ trait ShortcodeFormTrait {
                                         timeout: 30000,
 
                                         success: function (response) {
-                                            if (response.success && response.whatsapp_url) {
-                                                console.log('✅ Formulário enviado com sucesso, redirecionando...');
-
-                                                <?php
-                                                $plugin_options = get_option('formulario_hapvida_settings', array());
-                                                $redirect_obrigado = isset($plugin_options['redirect_obrigado']) && $plugin_options['redirect_obrigado'] === '1';
-                                                ?>
-
-                                                var redirectObrigado = <?php echo $redirect_obrigado ? 'true' : 'false'; ?>;
-
-                                                if (redirectObrigado) {
-                                                    // Armazena URL do WhatsApp no sessionStorage
-                                                    sessionStorage.setItem('hapvida_whatsapp_url', response.whatsapp_url);
-
-                                                    // Armazena informações do vendedor
-                                                    if (response.vendor_info) {
-                                                        sessionStorage.setItem('hapvida_vendor_info', JSON.stringify(response.vendor_info));
-                                                    }
-
-                                                    // Redireciona para página de obrigado COM URL do WhatsApp como parâmetro GET
-                                                    var thankYouUrl = 'https://tabelaplanos.com.br/obrigado/?whatsapp=' + encodeURIComponent(response.whatsapp_url);
-                                                    window.location.href = thankYouUrl;
-                                                } else {
-                                                    // Redireciona direto para o WhatsApp do vendedor
-                                                    window.location.href = response.whatsapp_url;
+                                            if (response.success) {
+                                                console.log('Formulario enviado com sucesso');
+                                                // Mostra o modal de aviso - o redirecionamento e tratado pela aplicacao externa
+                                                if (typeof window.showSuccessModal === 'function') {
+                                                    window.showSuccessModal();
                                                 }
-
                                             } else {
                                                 handleImprovedError(response.message || 'Erro desconhecido');
                                             }
