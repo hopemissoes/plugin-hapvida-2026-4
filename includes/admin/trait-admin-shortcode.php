@@ -12,15 +12,11 @@ trait AdminShortcodeTrait {
         $get_counts_nonce = wp_create_nonce('get_counts_nonce');
         $adjust_daily_count_nonce = wp_create_nonce('adjust_daily_count_nonce');
         $get_pending_webhooks_nonce = wp_create_nonce('get_pending_webhooks_nonce');
-        $toggle_vendor_nonce = wp_create_nonce('toggle_vendor_nonce'); // NOVO
-
-
         ?>
         <!-- Campos hidden para nonces -->
         <input type="hidden" id="get-counts-nonce" value="<?php echo $get_counts_nonce; ?>" />
         <input type="hidden" id="adjust-daily-count-nonce" value="<?php echo $adjust_daily_count_nonce; ?>" />
         <input type="hidden" id="webhook-nonce" value="<?php echo $get_pending_webhooks_nonce; ?>" />
-        <input type="hidden" id="toggle-vendor-nonce" value="<?php echo $toggle_vendor_nonce; ?>" />
 
         <div class="hapvida-dashboard">
 
@@ -90,11 +86,6 @@ trait AdminShortcodeTrait {
                         </div>
                     </div>
                 </div>
-            </div>
-
-            <!-- ⭐ NOVA SEÇÃO: GERENCIAMENTO DE VENDEDORES -->
-            <div class="dashboard-section vendors-management-section">
-                <?php $this->render_vendors_management_frontend(); ?>
             </div>
 
         </div>

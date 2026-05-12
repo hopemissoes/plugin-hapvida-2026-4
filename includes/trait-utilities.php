@@ -301,37 +301,4 @@ trait UtilitiesTrait {
         return $lead_id;
     }
 
-    private function generate_whatsapp_url($form_data, $vendedor)
-    {
-        // Número do vendedor sem formatação
-        $vendedor_phone = preg_replace('/[^0-9]/', '', $vendedor['telefone']);
-
-        // Se não tem código do país, adiciona +55
-        if (!str_starts_with($vendedor_phone, '55')) {
-            $vendedor_phone = '55' . $vendedor_phone;
-        }
-
-        // Monta mensagem para WhatsApp
-        $message = "Olá! Meu nome é *{$form_data['name']}*.\n\n";
-        $message .= "Gostaria de informações sobre o plano *{$form_data['qual_plano']}*.\n\n";
-        $message .= "Cidade: {$form_data['cidade']}\n";
-        $message .= "Quantidade de pessoas: {$form_data['qtd_pessoas']}\n";
-
-        if (!empty($form_data['ages'])) {
-            $ages_text = is_array($form_data['ages']) ? implode(', ', $form_data['ages']) : $form_data['ages'];
-            $message .= "dades: {$ages_text}\n";
-        }
-
-        $message .= "\n Meu telefone: {$form_data['telefone']}\n";
-        $message .= "Data do contato: {$form_data['data']} as {$form_data['hora']}\n";
-        $message .= "\n Id do Lead: {$form_data['lead_id']}";
-
-        // URL do WhatsApp
-        $whatsapp_url = 'https://wa.me/' . $vendedor_phone . '?text=' . urlencode($message);
-
-        $this->log("WhatsApp URL gerada para vendedor: {$vendedor['nome']}");
-
-        return $whatsapp_url;
-    }
-
 }

@@ -30,24 +30,20 @@ if (!class_exists('Formulario_Hapvida_LeadP3_Integration')) {
 
 // *** Carrega os traits modulares ***
 require_once plugin_dir_path(__FILE__) . 'includes/trait-utilities.php';
-require_once plugin_dir_path(__FILE__) . 'includes/trait-vendor-router.php';
 require_once plugin_dir_path(__FILE__) . 'includes/trait-rest-api.php';
 require_once plugin_dir_path(__FILE__) . 'includes/trait-ajax.php';
 require_once plugin_dir_path(__FILE__) . 'includes/trait-webhook.php';
 require_once plugin_dir_path(__FILE__) . 'includes/trait-form-handler.php';
 require_once plugin_dir_path(__FILE__) . 'includes/trait-shortcode-form.php';
-require_once plugin_dir_path(__FILE__) . 'includes/trait-auto-activate.php';
 
 class Formulario_Hapvida
 {
     use UtilitiesTrait;
-    use VendorRouterTrait;
     use RestApiTrait;
     use AjaxHandlersTrait;
     use WebhookTrait;
     use FormHandlerTrait;
     use ShortcodeFormTrait;
-    use AutoActivateTrait;
 
     private $max_webhook_attempts = 3;
 
@@ -59,15 +55,11 @@ class Formulario_Hapvida
     private $after_hours_timeout = 30;
 
     // Opções e nomes usados no banco
-    private $ultimo_vendedor_option_name = 'formulario_hapvida_ultimo_vendedor_info';
     private $settings_option_name = 'formulario_hapvida_settings';
     private $log_file;
     private $processed_forms = 'formulario_hapvida_processed_forms';
-    private $vendedores_option = 'formulario_hapvida_vendedores';
     private $daily_submissions_option = 'formulario_hapvida_daily_submissions';
     private $monthly_submissions_option = 'formulario_hapvida_monthly_submissions';
-    private $city_vendors_option = 'formulario_hapvida_city_vendors'; // *** ADICIONADO: Vendedores por cidade ***
-    private $url_consultores_option = 'formulario_hapvida_url_consultores'; // *** ADICIONADO: URLs de consultores ***
 
     // *** NOVO: Opção para armazenar webhooks com falha ***
     private $failed_webhooks_option = 'formulario_hapvida_failed_webhooks';
@@ -78,28 +70,18 @@ class Formulario_Hapvida
         // Caminho do arquivo de log
         $this->log_file = WP_CONTENT_DIR . '/formulario_hapvida.log';
 
-        // *** NOVO: Carrega configurações de timeout ***
+        // Carrega configurações de timeout
         $this->load_timeout_settings();
-
-        // Corrige (se necessário) a opção de último vendedor
-        $this->fix_ultimo_vendedor_option();
 
         // Enfileira scripts e registra REST
         add_action('wp_enqueue_scripts', array($this, 'enqueue_scripts'));
         add_action('rest_api_init', array($this, 'register_rest_route'));
 
-
         // Shortcode para exibir o formulário
         add_shortcode('formulario_hapvida', array($this, 'shortcode'));
         add_shortcode('formulario_hapvida_sem_titulo', array($this, 'shortcode_sem_titulo'));
 
-
-
-
         $this->ensure_timezone_configured();
-
-        // Handler de adjust_submission_count fica somente em Formulario_Hapvida_Admin
-        // (admin-page.php) para evitar conflito de hooks duplicados.
 
         add_action('wp_ajax_get_pending_webhooks', array($this, 'ajax_get_pending_webhooks'));
         add_action('wp_ajax_nopriv_get_pending_webhooks', array($this, 'ajax_get_pending_webhooks'));
@@ -107,23 +89,12 @@ class Formulario_Hapvida
         add_action('admin_init', array($this, 'handle_admin_debug_actions'));
 
         add_shortcode('hapvida_dashboard', array($this, 'render_dashboard_shortcode'));
-        add_shortcode('contagem_hapvida', array($this, 'render_dashboard_shortcode')); // Alias para compatibilidade
+        add_shortcode('contagem_hapvida', array($this, 'render_dashboard_shortcode'));
 
         add_action('rest_api_init', array($this, 'register_rest_routes'));
 
-        // *** AUTO-ATIVAÇÃO Seu Souza: Cron hook ***
-        add_action('hapvida_auto_activate_seu_souza', array($this, 'auto_activate_seu_souza'));
-        add_action('hapvida_auto_deactivate_seu_souza', array($this, 'auto_deactivate_seu_souza'));
-        add_filter('cron_schedules', array($this, 'add_auto_activate_cron_interval'));
-
-        // AJAX para toggle da auto-ativação
-        add_action('wp_ajax_hapvida_toggle_auto_activate_seu_souza', array($this, 'ajax_toggle_auto_activate_seu_souza'));
-
-        // Agenda os crons se a funcionalidade estiver ativa
-        $this->schedule_auto_activate_seu_souza();
-
         // Log de inicialização
-        $this->log("Plugin Formulário Hapvida inicializado com sistema de IDs únicos e webhook de confirmação");
+        $this->log("Plugin Formulário Hapvida inicializado (sem direcionamento de vendedor)");
     }
 
 }

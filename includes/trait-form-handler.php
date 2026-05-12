@@ -86,35 +86,8 @@ trait FormHandlerTrait {
             $this->log("Telefone: {$form_data['telefone']}");
             $this->log("Cidade: {$form_data['cidade']}");
 
-            // Obtém próximo vendedor (passa a cidade e página de origem para verificar vendedor específico)
-            $vendedor = $this->get_next_vendedor($form_data['cidade'], $form_data['pagina_origem']);
-            if (!$vendedor) {
-                throw new Exception('Nenhum vendedor disponível no momento.');
-            }
-
-            // Verifica se foi roteamento por URL específica
-            $roteamento_url = false;
-            if (!empty($form_data['pagina_origem'])) {
-                $vendedor_por_url = $this->get_vendedor_por_url($form_data['pagina_origem']);
-                if ($vendedor_por_url) {
-                    $roteamento_url = true;
-                    $this->log("🎯 Lead direcionado por ROTA ESPECÍFICA de URL");
-                }
-            }
-
-            $this->log("👤 Vendedor selecionado: {$vendedor['nome']} ({$vendedor['grupo']})");
-
-            // NOVO LOG: Mostra o ID do vendedor se existir
-            if (isset($vendedor['vendedor_id']) && !empty($vendedor['vendedor_id'])) {
-                $this->log("ID do Vendedor: {$vendedor['vendedor_id']}");
-            }
-
-            // Gera URL do WhatsApp
-            $whatsapp_url = $this->generate_whatsapp_url($form_data, $vendedor);
-
             // Atualiza contadores
             $this->update_submission_counts();
-            //$this->update_ultimo_vendedor($vendedor);
 
             // *** WEBHOOK: 1 tentativa rápida, se falhar vai pro cron ***
             $options = get_option($this->settings_option_name);
@@ -125,17 +98,6 @@ trait FormHandlerTrait {
             try {
                 // Prepara dados do webhook
                 $webhook_data = $form_data;
-
-                // Adiciona dados do vendedor
-                $webhook_data['vendedor_nome'] = $vendedor['nome'];
-                $webhook_data['vendedor_telefone'] = $vendedor['telefone'];
-                $webhook_data['vendedor_id'] = isset($vendedor['vendedor_id']) ? $vendedor['vendedor_id'] : '';
-                $webhook_data['grupo'] = isset($vendedor['grupo']) ? $vendedor['grupo'] : 'drv';
-                $webhook_data['atendente'] = $vendedor['nome'];
-
-                // Informações sobre roteamento
-                $webhook_data['roteamento_especifico'] = $roteamento_url ? 'sim' : 'nao';
-                $webhook_data['tipo_roteamento'] = $roteamento_url ? 'url_consultor' : 'round_robin';
                 $webhook_data['url_origem'] = $form_data['pagina_origem'];
 
                 // Contagens
@@ -156,17 +118,12 @@ trait FormHandlerTrait {
                 $webhook_data['idades'] = is_array($form_data['ages']) ?
                     implode(', ', $form_data['ages']) : $form_data['ages'];
 
-                // Determina URL do webhook
-                $grupo = isset($vendedor['grupo']) ? $vendedor['grupo'] : 'drv';
-                if ($grupo === 'drv') {
-                    $webhook_url = isset($options['webhook_url_drv']) ? $options['webhook_url_drv'] : '';
-                } else {
-                    $webhook_url = isset($options['webhook_url_seu_souza']) ? $options['webhook_url_seu_souza'] : '';
-                }
+                // URL unica do webhook (sem grupo / sem vendedor)
+                $webhook_url = isset($options['webhook_url']) ? $options['webhook_url'] : '';
 
                 if (!empty($webhook_url)) {
                     // 1 tentativa rápida com timeout de 2s (se falhar, vai pro cron de retry)
-                    error_log("HAPVIDA WEBHOOK: Tentativa imediata para lead {$form_data['lead_id']} - grupo {$grupo}");
+                    error_log("HAPVIDA WEBHOOK: Tentativa imediata para lead {$form_data['lead_id']}");
 
                     $webhook_response = wp_remote_post($webhook_url, array(
                         'timeout' => 2,
@@ -209,9 +166,9 @@ trait FormHandlerTrait {
                     }
 
                 } else {
-                    error_log("HAPVIDA WEBHOOK: URL NAO CONFIGURADA para grupo {$grupo} - lead {$form_data['lead_id']}");
+                    error_log("HAPVIDA WEBHOOK: URL NAO CONFIGURADA - lead {$form_data['lead_id']}");
                     $webhook_state = 'failed';
-                    $this->save_webhook_entry($webhook_data, 'permanent_failure', "URL do webhook nao configurada para grupo {$grupo}");
+                    $this->save_webhook_entry($webhook_data, 'permanent_failure', "URL do webhook nao configurada");
                 }
 
             } catch (Exception $e) {
@@ -232,30 +189,20 @@ trait FormHandlerTrait {
                     $leadp3_integration = $formulario_hapvida_leadp3;
                 }
                 if ($leadp3_integration) {
-                    // Envio assíncrono - retorna instantaneamente
-                    $leadp3_integration->send_to_leadp3($form_data, $vendedor);
-                    // â†‘ NÃO bloqueia - continua imediatamente
+                    // Envio assíncrono - retorna instantaneamente, sem vendedor
+                    $leadp3_integration->send_to_leadp3($form_data, null);
                 }
             } catch (Exception $e) {
                 // Apenas registra erro - não afeta formulário
                 error_log("LeadP3: " . $e->getMessage());
             }
 
-            // Prepara resposta de sucesso
+            // Prepara resposta de sucesso (sem redirecionamento - frontend cuida)
             $response = array(
                 'success' => true,
-                'message' => 'Formulário processado com sucesso! Redirecionando...',
-                'redirect' => $whatsapp_url, // *** MANTÉM COMO ESTAVA ***
-                'whatsapp_url' => $whatsapp_url, // *** ADICIONA APENAS ESTA LINHA EXTRA ***
+                'message' => 'Formulário processado com sucesso!',
                 'webhook_status' => $webhook_state,
                 'business_hours' => $is_business_hours,
-                'tracking_enabled' => false,
-                'vendor_info' => array(
-                    'name' => $vendedor['nome'],
-                    'group' => $vendedor['grupo'],
-                    'phone' => $vendedor['telefone'],
-                    'id' => isset($vendedor['vendedor_id']) ? $vendedor['vendedor_id'] : ''
-                ),
                 'processed_data' => array(
                     'phone_formatted' => $form_data['telefone'],
                     'submission_time' => $form_data['data'] . ' ' . $form_data['hora'],
@@ -510,19 +457,6 @@ trait FormHandlerTrait {
 
             $this->log("Teste: {$phone} -> {$status} - {$message}");
         }
-    }
-
-    private function update_ultimo_vendedor($vendedor)
-    {
-        $ultimo_vendedor_info = array(
-            'vendedor' => $vendedor,
-            'timestamp' => current_time('timestamp'),
-            'data' => current_time('d/m/Y H:i:s')
-        );
-
-        update_option($this->ultimo_vendedor_option_name, $ultimo_vendedor_info);
-
-        $this->log("👤 Último vendedor atualizado: {$vendedor['nome']}");
     }
 
     private function update_submission_counts()

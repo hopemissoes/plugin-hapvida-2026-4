@@ -27,20 +27,11 @@ trait AdminSettingsTrait {
             'formulario-hapvida-admin'
         );
 
-        // Campo URL do Webhook (DRV) - Primeiro Envio
+        // Campo URL do Webhook (unica para todos os leads)
         add_settings_field(
-            'webhook_url_drv',
-            'URL do Webhook DRV (Primeiro Envio)',
-            array($this, 'webhook_url_drv_callback'),
-            'formulario-hapvida-admin',
-            'formulario_hapvida_general'
-        );
-
-        // Campo URL do Webhook (Seu Souza) - Primeiro Envio
-        add_settings_field(
-            'webhook_url_seu_souza',
-            'URL do Webhook Seu Souza (Primeiro Envio)',
-            array($this, 'webhook_url_seu_souza_callback'),
+            'webhook_url',
+            'URL do Webhook',
+            array($this, 'webhook_url_callback'),
             'formulario-hapvida-admin',
             'formulario_hapvida_general'
         );
@@ -119,20 +110,12 @@ trait AdminSettingsTrait {
 
     }
 
-    public function webhook_url_drv_callback()
+    public function webhook_url_callback()
     {
         $options = get_option($this->option_name);
-        $webhook_url_drv = isset($options['webhook_url_drv']) ? $options['webhook_url_drv'] : '';
-        echo "<input type='url' class='regular-text' name='{$this->option_name}[webhook_url_drv]' value='{$webhook_url_drv}' data-label='URL do Webhook DRV (Primeiro Envio)' />";
-        echo "<p class='description'>URL usada para o <strong>primeiro envio</strong> de leads do grupo DRV.</p>";
-    }
-
-    public function webhook_url_seu_souza_callback()
-    {
-        $options = get_option($this->option_name);
-        $webhook_url_seu_souza = isset($options['webhook_url_seu_souza']) ? $options['webhook_url_seu_souza'] : '';
-        echo "<input type='url' class='regular-text' name='{$this->option_name}[webhook_url_seu_souza]' value='{$webhook_url_seu_souza}' data-label='URL do Webhook Seu Souza (Primeiro Envio)' />";
-        echo "<p class='description'>URL usada para o <strong>primeiro envio</strong> de leads do grupo Seu Souza.</p>";
+        $webhook_url = isset($options['webhook_url']) ? $options['webhook_url'] : '';
+        echo "<input type='url' class='regular-text' name='{$this->option_name}[webhook_url]' value='{$webhook_url}' data-label='URL do Webhook' />";
+        echo "<p class='description'>URL para onde todos os leads sao enviados.</p>";
     }
 
     public function cidades_callback()
