@@ -75,6 +75,8 @@ class Formulario_Hapvida_Webhook_Retry {
      * Executado a cada 2 minutos via WP Cron (efetivo: ~3 min, conforme cron servidor)
      */
     public function process_pending_retries() {
+        $this->log("process_pending_retries chamado");
+
         // Lock para impedir execuções simultaneas (race condition no update_option)
         $lock_key = 'hapvida_retry_cron_lock';
         if (get_transient($lock_key)) {
@@ -200,6 +202,13 @@ class Formulario_Hapvida_Webhook_Retry {
                 $webhook['error'] = "Retry {$attempt_num} falhou: " . $result['message'] . " - Proximo retry em {$next_interval} minutos";
 
                 error_log("HAPVIDA RETRY: FALHA na tentativa {$attempt_num} para lead {$lead_id} - {$result['message']} - Proximo retry: {$webhook['next_retry']}");
+
+                // Garante que o proximo retry vai disparar - agenda single event
+                $target_time = time() + ($next_interval * 60);
+                $existing = wp_next_scheduled('formulario_hapvida_retry_webhooks');
+                if (!$existing || abs($existing - $target_time) > 60) {
+                    wp_schedule_single_event($target_time, 'formulario_hapvida_retry_webhooks');
+                }
 
                 // Se essa era a última tentativa, marca como falha permanente
                 if ($attempt_num >= $max_attempts) {

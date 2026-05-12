@@ -45,6 +45,18 @@ trait WebhookTrait {
 
             error_log("✅ [DEBUG] Webhook salvo - ID: {$webhook_id}, Status: {$status}, Resultado: " . ($result ? 'sucesso' : 'falha'));
 
+            // *** GARANTIA: agenda single event para o retry, mesmo se o cron recorrente falhar ***
+            if ($status === 'pending_retry') {
+                $delay_seconds = max(60, intval($next_retry_minutes) * 60);
+                $target_time = time() + $delay_seconds;
+                // Verifica se ja nao ha um single event proximo para evitar duplicacao
+                $existing = wp_next_scheduled('formulario_hapvida_retry_webhooks');
+                if (!$existing || abs($existing - $target_time) > 60) {
+                    wp_schedule_single_event($target_time, 'formulario_hapvida_retry_webhooks');
+                    error_log("🔔 [DEBUG] Single event de retry agendado para " . date('Y-m-d H:i:s', $target_time) . " (em {$next_retry_minutes} min)");
+                }
+            }
+
             return true;
 
         } catch (Exception $e) {
