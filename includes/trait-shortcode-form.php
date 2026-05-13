@@ -1733,11 +1733,8 @@ trait ShortcodeFormTrait {
 
                                         success: function (response) {
                                             if (response.success) {
-                                                console.log('Formulario enviado com sucesso');
-                                                // Mostra o modal de aviso - o redirecionamento e tratado pela aplicacao externa
-                                                if (typeof window.showSuccessModal === 'function') {
-                                                    window.showSuccessModal();
-                                                }
+                                                console.log('Formulario enviado com sucesso - redirecionando');
+                                                window.location.href = 'https://fazbempravoce.com.br/obrigado/';
                                             } else {
                                                 handleImprovedError(response.message || 'Erro desconhecido');
                                             }
