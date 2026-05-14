@@ -375,6 +375,15 @@ trait ShortcodeFormTrait {
                 font-size: 13px;
                 font-weight: 500;
                 font-family: 'Open Sans', sans-serif;
+                line-height: 1.4;
+                text-align: center;
+            }
+
+            .hapvida-secure-notice span strong {
+                display: block;
+                font-size: 15px;
+                font-weight: 700;
+                margin-bottom: 2px;
             }
 
             /* ===== VALIDATION STATES ===== */
@@ -1230,7 +1239,7 @@ trait ShortcodeFormTrait {
                         <!-- Reassurance Notice -->
                         <div class="hapvida-secure-notice">
                             <span aria-hidden="true">🤝</span>
-                            <span>Não iremos te incomodar, nós também odiamos vendedores chatos</span>
+                            <span><strong>Não iremos te incomodar,</strong>nós também odiamos vendedores chatos</span>
                         </div>
                     </form>
                 </div>
