@@ -371,8 +371,8 @@ trait ShortcodeFormTrait {
             }
 
             .hapvida-secure-notice span {
-                color: #8ea4b8;
-                font-size: 11px;
+                color: #475569;
+                font-size: 13px;
                 font-weight: 500;
                 font-family: 'Open Sans', sans-serif;
             }
@@ -1021,6 +1021,65 @@ trait ShortcodeFormTrait {
                     font-size: 13px;
                     padding: 10px;
                 }
+
+                .hapvida-promo-banner .hapvida-promo-label { font-size: 14px !important; }
+                .hapvida-promo-banner .hapvida-promo-label strong { font-size: 15px !important; }
+                .hapvida-promo-banner .hapvida-promo-timer .hapvida-cd-num { font-size: 18px !important; }
+                .hapvida-promo-banner .hapvida-promo-timer .hapvida-cd-block { min-width: 38px !important; padding: 5px 6px !important; }
+            }
+
+            /* === PROMO BANNER === */
+            .hapvida-promo-banner {
+                background: linear-gradient(135deg, #ff6b00, #e85d00) !important;
+                border-radius: 10px !important;
+                padding: 16px 20px !important;
+                margin-bottom: 16px !important;
+                color: #fff !important;
+                text-align: center !important;
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+                box-sizing: border-box !important;
+            }
+            .hapvida-promo-banner .hapvida-promo-label {
+                font-size: 16px !important;
+                font-weight: 700 !important;
+                display: block !important;
+                margin-bottom: 10px !important;
+                color: #fff !important;
+            }
+            .hapvida-promo-banner .hapvida-promo-label strong {
+                font-size: 18px !important;
+                font-weight: 900 !important;
+            }
+            .hapvida-promo-banner .hapvida-promo-timer {
+                display: flex !important;
+                justify-content: center !important;
+                gap: 8px !important;
+                flex-wrap: nowrap !important;
+            }
+            .hapvida-promo-banner .hapvida-promo-timer .hapvida-cd-block {
+                background: rgba(0,0,0,0.2) !important;
+                border-radius: 6px !important;
+                padding: 6px 8px !important;
+                min-width: 44px !important;
+                text-align: center !important;
+                box-sizing: border-box !important;
+            }
+            .hapvida-promo-banner .hapvida-promo-timer .hapvida-cd-num {
+                font-size: 22px !important;
+                font-weight: 800 !important;
+                font-variant-numeric: tabular-nums !important;
+                line-height: 1.2 !important;
+                display: block !important;
+                color: #fff !important;
+            }
+            .hapvida-promo-banner .hapvida-promo-timer .hapvida-cd-lbl {
+                font-size: 10px !important;
+                text-transform: uppercase !important;
+                opacity: 0.85;
+                letter-spacing: 0.5px !important;
+                display: block !important;
+                color: #fff !important;
+                margin-top: 2px !important;
             }
                 </style>
 
@@ -1038,6 +1097,24 @@ trait ShortcodeFormTrait {
                         </div>
                     </div>
                     <?php endif; ?>
+
+                    <!-- Banner Promocional com Countdown -->
+                    <?php
+                    $promo_opts = get_option('formulario_hapvida_settings', array());
+                    $show_promo = !isset($promo_opts['promo_banner']) || $promo_opts['promo_banner'] === '1';
+                    if ($show_promo):
+                    ?>
+                    <div class="hapvida-promo-banner">
+                        <span class="hapvida-promo-label"><strong>15% OFF em 3x</strong> &mdash; oferta acaba em:</span>
+                        <div class="hapvida-promo-timer">
+                            <div class="hapvida-cd-block"><span class="hapvida-cd-num hapvida-cd-days">00</span><span class="hapvida-cd-lbl">DIAS</span></div>
+                            <div class="hapvida-cd-block"><span class="hapvida-cd-num hapvida-cd-hours">00</span><span class="hapvida-cd-lbl">HORAS</span></div>
+                            <div class="hapvida-cd-block"><span class="hapvida-cd-num hapvida-cd-mins">00</span><span class="hapvida-cd-lbl">MIN</span></div>
+                            <div class="hapvida-cd-block"><span class="hapvida-cd-num hapvida-cd-secs">00</span><span class="hapvida-cd-lbl">SEG</span></div>
+                        </div>
+                    </div>
+                    <?php endif; ?>
+
                     <form class="hapvida-form" id="hapvida-main-form">
                         <!-- Nome Completo -->
                         <div class="hapvida-field" id="hapvida-field-name">
@@ -1220,6 +1297,35 @@ trait ShortcodeFormTrait {
                 </div>
 
                 <script>
+                    <?php if ($show_promo): ?>
+                    // === COUNTDOWN ATÉ FIM DO MÊS (suporta múltiplas instâncias) ===
+                    (function() {
+                        if (window._hapvidaCountdownActive) return;
+                        window._hapvidaCountdownActive = true;
+                        function pad(n) { return n < 10 ? '0' + n : n; }
+                        function updateAll(sel, val) {
+                            var els = document.querySelectorAll(sel);
+                            for (var i = 0; i < els.length; i++) { els[i].textContent = val; }
+                        }
+                        function updateCountdown() {
+                            var now = new Date();
+                            var endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+                            var diff = endOfMonth - now;
+                            if (diff <= 0) { diff = 0; }
+                            var d = Math.floor(diff / 86400000);
+                            var h = Math.floor((diff % 86400000) / 3600000);
+                            var m = Math.floor((diff % 3600000) / 60000);
+                            var s = Math.floor((diff % 60000) / 1000);
+                            updateAll('.hapvida-cd-days', pad(d));
+                            updateAll('.hapvida-cd-hours', pad(h));
+                            updateAll('.hapvida-cd-mins', pad(m));
+                            updateAll('.hapvida-cd-secs', pad(s));
+                        }
+                        updateCountdown();
+                        setInterval(updateCountdown, 1000);
+                    })();
+                    <?php endif; ?>
+
                             (function ($) {
                                    'use strict';
 

@@ -779,6 +779,33 @@ trait AdminPageRendererTrait {
                         </div>
                     </div>
 
+                    <!-- 2.5. Banner Promocional -->
+                    <?php
+                    $options_promo = get_option($this->option_name);
+                    $promo_ativo = !isset($options_promo['promo_banner']) || $options_promo['promo_banner'] === '1';
+                    ?>
+                    <div class="hapvida-accordion">
+                        <button type="button" class="hapvida-accordion-header">
+                            <span class="hapvida-accordion-title">
+                                <span class="dashicons dashicons-megaphone"></span> Banner Promocional
+                                <span class="hapvida-accordion-badge <?php echo $promo_ativo ? 'badge-on' : 'badge-off'; ?>"><?php echo $promo_ativo ? 'Ativo' : 'Off'; ?></span>
+                            </span>
+                            <span class="hapvida-accordion-arrow dashicons dashicons-arrow-down-alt2"></span>
+                        </button>
+                        <div class="hapvida-accordion-body" style="display:none;">
+                            <form action="options.php" method="post">
+                                <?php settings_fields('formulario_hapvida_settings'); ?>
+                                <input type="hidden" name="<?php echo $this->option_name; ?>[promo_banner]" value="0" />
+                                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 12px 0;">
+                                    <input type="checkbox" id="promo_banner" name="<?php echo $this->option_name; ?>[promo_banner]" value="1" <?php checked($promo_ativo, true); ?> style="width:18px;height:18px;" />
+                                    <span>Exibir banner "15% OFF em 3x" com countdown no formulário</span>
+                                </label>
+                                <p class="description" style="margin-bottom: 14px;">Desative quando a promoção encerrar. O banner com contagem regressiva até o fim do mês será removido do formulário.</p>
+                                <?php submit_button('Salvar', 'primary', 'submit', false); ?>
+                            </form>
+                        </div>
+                    </div>
+
                     <!-- 3. Relatórios de Leads -->
                     <?php
                     $options = get_option($this->option_name);
