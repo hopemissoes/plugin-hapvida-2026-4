@@ -386,6 +386,13 @@ trait ShortcodeFormTrait {
                 margin-bottom: 2px;
             }
 
+            .hapvida-secure-notice .hapvida-secure-emoji {
+                display: inline-block;
+                margin-right: 6px;
+                font-size: 15px;
+                vertical-align: -1px;
+            }
+
             /* ===== VALIDATION STATES ===== */
             .hapvida-field.error {
                 border-color: #ef4444 !important;
@@ -1238,8 +1245,7 @@ trait ShortcodeFormTrait {
 
                         <!-- Reassurance Notice -->
                         <div class="hapvida-secure-notice">
-                            <span aria-hidden="true">🤝</span>
-                            <span><strong>Não iremos te incomodar,</strong>nós também odiamos vendedores chatos</span>
+                            <span><strong><span class="hapvida-secure-emoji" aria-hidden="true">⚠️</span>Não iremos te incomodar,</strong>nós também odiamos vendedores chatos</span>
                         </div>
                     </form>
                 </div>
