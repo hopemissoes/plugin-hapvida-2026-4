@@ -251,25 +251,4 @@ trait WebhookTrait {
         );
     }
 
-    /**
-     * AJAX para retry manual de webhooks (para usar na admin)
-     */
-    public function ajax_retry_failed_webhooks()
-    {
-        check_ajax_referer('retry_webhooks_nonce', 'security');
-
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error('Permissão negada');
-        }
-
-        $failed_webhooks = get_option($this->failed_webhooks_option, array());
-        $pending_count = count(array_filter($failed_webhooks, function ($w) {
-            return in_array($w['status'], array('pending', 'pending_retry'));
-        }));
-
-        wp_send_json_success(array(
-            'message' => 'Processo de retry executado com sucesso',
-            'pending_webhooks' => $pending_count
-        ));
-    }
 }

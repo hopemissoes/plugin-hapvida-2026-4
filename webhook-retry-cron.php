@@ -40,6 +40,10 @@ class Formulario_Hapvida_Webhook_Retry {
         // Agenda o cron se não estiver agendado
         add_action('init', array($this, 'schedule_retry_cron'));
 
+        // AJAX para forçar retry de webhooks travados (admin + frontend logado/anônimo)
+        add_action('wp_ajax_hapvida_force_retry_webhooks', array($this, 'ajax_force_retry'));
+        add_action('wp_ajax_nopriv_hapvida_force_retry_webhooks', array($this, 'ajax_force_retry'));
+
         // Hook de desativação
         register_deactivation_hook(
             plugin_dir_path(__FILE__) . 'formulario-hapvida.php',
@@ -358,6 +362,47 @@ class Formulario_Hapvida_Webhook_Retry {
         $this->process_pending_retries();
 
         return $reset_count;
+    }
+
+    /**
+     * AJAX handler para forçar retry imediato de todos os pendentes.
+     * Protegido por nonce. Aceita request do admin e do shortcode público.
+     */
+    public function ajax_force_retry() {
+        if (!check_ajax_referer('hapvida_force_retry_webhooks', 'nonce', false)) {
+            wp_send_json_error(array('message' => 'Nonce inválido ou expirado'));
+        }
+
+        // Destrava lock travado (TTL de 5min ainda assim limita abuso)
+        delete_transient('hapvida_retry_cron_lock');
+
+        $webhooks = get_option($this->failed_webhooks_option, array());
+        $pending_before = 0;
+        foreach ($webhooks as $w) {
+            if (isset($w['status']) && $w['status'] === 'pending_retry') {
+                $pending_before++;
+            }
+        }
+
+        $reset_count = $this->force_retry_all();
+
+        // Recalcula quantos seguem pendentes
+        $webhooks_after = get_option($this->failed_webhooks_option, array());
+        $still_pending = 0;
+        $just_sent = 0;
+        foreach ($webhooks_after as $w) {
+            if (!isset($w['status'])) continue;
+            if ($w['status'] === 'pending_retry') $still_pending++;
+            elseif ($w['status'] === 'sent') $just_sent++;
+        }
+
+        wp_send_json_success(array(
+            'message' => "Forçado retry em {$reset_count} webhook(s). Restam {$still_pending} pendente(s).",
+            'reset_count' => $reset_count,
+            'still_pending' => $still_pending,
+            'pending_before' => $pending_before,
+            'sent_total' => $just_sent,
+        ));
     }
 
     /**
