@@ -157,8 +157,11 @@ trait AdminShortcodeTrait {
 
             @media (max-width: 600px) {
                 .all-leads-header .control-btn {
-                    flex: 1 1 100%;
+                    flex: 1 1 0;
                     justify-content: center;
+                    padding: 8px 10px;
+                    font-size: 12px;
+                    white-space: nowrap;
                 }
                 .all-leads-header #force-retry-feedback {
                     flex: 1 1 100%;
