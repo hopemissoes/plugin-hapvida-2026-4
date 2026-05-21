@@ -303,6 +303,52 @@ trait AdminAjaxTrait {
         }
     }
 
+    /**
+     * Envio forçado de webhooks pendentes.
+     * Acionado pelo botão "Reenviar Webhooks Pendentes" no shortcode de contagem.
+     * Reprocessa a fila imediatamente, sem depender do WP-Cron.
+     */
+    public function ajax_force_send_webhooks()
+    {
+        // Pode demorar alguns segundos se houver vários webhooks na fila
+        if (function_exists('set_time_limit')) {
+            @set_time_limit(180);
+        }
+
+        global $formulario_hapvida_webhook_retry;
+
+        if (
+            !isset($formulario_hapvida_webhook_retry) ||
+            !is_object($formulario_hapvida_webhook_retry) ||
+            !method_exists($formulario_hapvida_webhook_retry, 'force_retry_all')
+        ) {
+            wp_send_json_error('Sistema de reenvio de webhooks indisponível.');
+            return;
+        }
+
+        $result = $formulario_hapvida_webhook_retry->force_retry_all();
+
+        if (empty($result['total'])) {
+            wp_send_json_success(array(
+                'message' => 'Nenhum webhook pendente para reenviar.',
+                'stats'   => $result
+            ));
+            return;
+        }
+
+        $message = sprintf(
+            '%d webhook(s) reenviado(s) com sucesso, %d ainda com falha (de %d pendente(s)).',
+            $result['success'],
+            $result['failed'],
+            $result['total']
+        );
+
+        wp_send_json_success(array(
+            'message' => $message,
+            'stats'   => $result
+        ));
+    }
+
     // FUNÇÃO PARA EXPORTAR TODOS OS LEADS
     public function ajax_get_all_leads_for_export()
     {

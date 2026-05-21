@@ -75,6 +75,10 @@ class Formulario_Hapvida_Admin
         add_action('wp_ajax_get_recent_leads', array($this, 'ajax_get_recent_leads'));
         add_action('wp_ajax_nopriv_get_recent_leads', array($this, 'ajax_get_recent_leads'));
 
+        // *** NOVO: REENVIO FORÇADO DE WEBHOOKS PENDENTES (com e sem login) ***
+        add_action('wp_ajax_force_send_webhooks', array($this, 'ajax_force_send_webhooks'));
+        add_action('wp_ajax_nopriv_force_send_webhooks', array($this, 'ajax_force_send_webhooks'));
+
         // Exportar todos os leads
         add_action('wp_ajax_get_all_leads_for_export', array($this, 'ajax_get_all_leads_for_export'));
         add_action('wp_ajax_nopriv_get_all_leads_for_export', array($this, 'ajax_get_all_leads_for_export'));

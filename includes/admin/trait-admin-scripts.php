@@ -537,35 +537,62 @@ trait AdminScriptsTrait {
 
                                 $(document).on('click', '#force-update-leads', function (e) {
                                     e.preventDefault();
-                                    console.log('🔄 Atualização manual solicitada');
+                                    console.log('📤 Reenvio forçado de webhooks solicitado');
                                     var btn = $(this);
                                     if (btn.prop('disabled')) return;
                                     var originalText = btn.html();
-                                    btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Atualizando...');
+                                    btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Reenviando...');
+
+                                    function refreshLeadsTable(done) {
+                                        $.ajax({
+                                            url: ajaxurl,
+                                            type: 'POST',
+                                            dataType: 'json',
+                                            data: { action: 'get_recent_leads' },
+                                            success: function (response) {
+                                                if (response && response.success) {
+                                                    var tbody = $('#leads-table-body');
+                                                    if (tbody.length) {
+                                                        tbody.empty();
+                                                        var leads = response.data;
+                                                        if (!leads || !Array.isArray(leads) || leads.length === 0) {
+                                                            tbody.html('<tr><td colspan="7" style="text-align:center;">Nenhum lead registrado</td></tr>');
+                                                        } else {
+                                                            leads.forEach(function (lead) {
+                                                                var badge = getWebhookStatusBadge(lead.webhook_status || lead.status || 'pending');
+                                                                tbody.append('<tr class="webhook-row" data-webhook-id="' + lead.id + '" style="cursor:pointer;"><td>' + lead.created_at + '</td><td style="color:#0054B8;font-weight:500;">' + lead.client_name + '</td><td><span style="padding:2px 8px;background:#e3f2fd;border-radius:3px;">' + lead.grupo + '</span></td><td>' + lead.phone + '</td><td>' + lead.city + '</td><td>' + lead.vendor + '</td><td>' + badge + '</td></tr>');
+                                                            });
+                                                        }
+                                                    }
+                                                }
+                                            },
+                                            complete: function () {
+                                                if (typeof done === 'function') done();
+                                            }
+                                        });
+                                    }
 
                                     $.ajax({
                                         url: ajaxurl,
                                         type: 'POST',
                                         dataType: 'json',
-                                        data: { action: 'get_recent_leads' },
+                                        data: { action: 'force_send_webhooks' },
                                         success: function (response) {
                                             if (response && response.success) {
-                                                var tbody = $('#leads-table-body');
-                                                if (tbody.length === 0) return;
-                                                tbody.empty();
-                                                var leads = response.data;
-                                                if (!leads || !Array.isArray(leads) || leads.length === 0) {
-                                                    tbody.html('<tr><td colspan="7" style="text-align:center;">Nenhum lead registrado</td></tr>');
-                                                } else {
-                                                    leads.forEach(function (lead) {
-                                                        var badge = getWebhookStatusBadge(lead.webhook_status || lead.status || 'pending');
-                                                        tbody.append('<tr class="webhook-row" data-webhook-id="' + lead.id + '" style="cursor:pointer;"><td>' + lead.created_at + '</td><td style="color:#0054B8;font-weight:500;">' + lead.client_name + '</td><td><span style="padding:2px 8px;background:#e3f2fd;border-radius:3px;">' + lead.grupo + '</span></td><td>' + lead.phone + '</td><td>' + lead.city + '</td><td>' + lead.vendor + '</td><td>' + badge + '</td></tr>');
-                                                    });
-                                                }
+                                                var msg = (response.data && response.data.message) ? response.data.message : 'Reenvio concluído.';
+                                                alert('✅ ' + msg);
+                                            } else {
+                                                var err = (response && response.data) ? response.data : 'Falha ao reenviar webhooks.';
+                                                alert('⚠️ ' + err);
                                             }
                                         },
+                                        error: function () {
+                                            alert('⚠️ Erro de conexão ao reenviar webhooks.');
+                                        },
                                         complete: function () {
-                                            btn.prop('disabled', false).html(originalText);
+                                            refreshLeadsTable(function () {
+                                                btn.prop('disabled', false).html(originalText);
+                                            });
                                         }
                                     });
                                 });

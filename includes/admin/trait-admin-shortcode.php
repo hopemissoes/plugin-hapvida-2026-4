@@ -782,7 +782,7 @@ trait AdminShortcodeTrait {
         echo '<div class="section-header">';
         echo '<h2><i class="fas fa-users"></i> Todos os Leads Recebidos</h2>';
         echo '<button id="force-update-leads" class="control-btn secondary small" style="margin-left: auto;">';
-        echo '<i class="fas fa-sync-alt"></i> Atualizar Agora';
+        echo '<i class="fas fa-paper-plane"></i> Reenviar Webhooks Pendentes';
         echo '</button>';
         echo '</div>';
 

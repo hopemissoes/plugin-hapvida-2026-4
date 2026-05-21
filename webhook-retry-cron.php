@@ -22,6 +22,7 @@ class Formulario_Hapvida_Webhook_Retry {
     const CRON_HOOK = 'formulario_hapvida_retry_webhooks';
     const CRON_INTERVAL = 'hapvida_two_minutes';
     const MAX_PROCESS_PER_RUN = 10;
+    const MAX_FORCE_PER_RUN = 25;
 
     private $failed_webhooks_option = 'formulario_hapvida_failed_webhooks';
     private $settings_option_name = 'formulario_hapvida_settings';
@@ -201,11 +202,11 @@ class Formulario_Hapvida_Webhook_Retry {
     /**
      * Envia o webhook via HTTP POST
      */
-    private function send_webhook($url, $data) {
+    private function send_webhook($url, $data, $timeout = 20) {
         $body = json_encode($data);
 
         $config = array(
-            'timeout' => 20,
+            'timeout' => $timeout,
             'blocking' => true,
             'body' => $body,
             'headers' => array(
@@ -300,27 +301,80 @@ class Formulario_Hapvida_Webhook_Retry {
     }
 
     /**
-     * Força retry imediato de todos os webhooks pendentes (para uso manual)
+     * Envio forçado: tenta entregar imediatamente todos os webhooks que ainda
+     * não foram enviados (pending, pending_retry e permanent_failure).
+     *
+     * Usado pelo botão de reenvio manual do dashboard. Não depende do WP-Cron,
+     * que pode não disparar em sites com pouco tráfego.
      */
     public function force_retry_all() {
         $webhooks = get_option($this->failed_webhooks_option, array());
-        $reset_count = 0;
 
-        foreach ($webhooks as &$webhook) {
-            if ($webhook['status'] === 'pending_retry') {
-                $webhook['next_retry'] = current_time('mysql'); // Torna elegível agora
-                $reset_count++;
-            }
+        $result = array(
+            'total'     => 0,
+            'attempted' => 0,
+            'success'   => 0,
+            'failed'    => 0,
+        );
+
+        if (empty($webhooks)) {
+            return $result;
         }
 
-        if ($reset_count > 0) {
+        $this->log("=== ENVIO FORÇADO: iniciando reenvio manual ===");
+
+        $has_changes = false;
+
+        foreach ($webhooks as &$webhook) {
+            $status = isset($webhook['status']) ? $webhook['status'] : 'pending';
+
+            // Webhook já entregue: nada a fazer
+            if ($status === 'sent') {
+                continue;
+            }
+
+            $result['total']++;
+
+            // Limita o lote por clique para evitar timeout do PHP
+            if ($result['attempted'] >= self::MAX_FORCE_PER_RUN) {
+                continue;
+            }
+
+            $webhook_url = $this->get_webhook_url($webhook);
+            $data = isset($webhook['data']) ? $webhook['data'] : array();
+
+            if (empty($webhook_url) || empty($data)) {
+                continue;
+            }
+
+            $result['attempted']++;
+            $send = $this->send_webhook($webhook_url, $data, 12);
+
+            $webhook['last_attempt'] = current_time('mysql');
+            $has_changes = true;
+
+            $lead = isset($data['nome']) ? $data['nome'] : 'N/A';
+
+            if ($send['success']) {
+                $webhook['status'] = 'sent';
+                $webhook['error'] = 'Enviado via envio forçado manual - ' . $send['message'];
+                $result['success']++;
+                $this->log("✅ ENVIO FORÇADO: lead {$lead} enviado com sucesso");
+            } else {
+                $webhook['error'] = 'Envio forçado falhou: ' . $send['message'];
+                $result['failed']++;
+                $this->log("❌ ENVIO FORÇADO: lead {$lead} falhou - " . $send['message']);
+            }
+        }
+        unset($webhook);
+
+        if ($has_changes) {
             update_option($this->failed_webhooks_option, $webhooks);
         }
 
-        // Dispara o processamento imediato
-        $this->process_pending_retries();
+        $this->log("=== ENVIO FORÇADO: {$result['attempted']} tentados, {$result['success']} ok, {$result['failed']} falhas ===");
 
-        return $reset_count;
+        return $result;
     }
 
     /**
