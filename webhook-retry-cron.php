@@ -348,11 +348,21 @@ class Formulario_Hapvida_Webhook_Retry {
         $reset_count = 0;
 
         foreach ($webhooks as &$webhook) {
-            if ($webhook['status'] === 'pending_retry') {
+            $status = isset($webhook['status']) ? $webhook['status'] : '';
+
+            // Reenvio manual: torna elegivel agora tanto os que aguardam retry
+            // quanto os que ja esgotaram as tentativas (falha permanente).
+            if ($status === 'pending_retry' || $status === 'permanent_failure') {
+                if ($status === 'permanent_failure') {
+                    // Revive a falha permanente com um novo ciclo de tentativas
+                    $webhook['attempts'] = 0;
+                }
+                $webhook['status'] = 'pending_retry';
                 $webhook['next_retry'] = current_time('mysql'); // Torna elegível agora
                 $reset_count++;
             }
         }
+        unset($webhook);
 
         if ($reset_count > 0) {
             update_option($this->failed_webhooks_option, $webhooks);
@@ -366,11 +376,17 @@ class Formulario_Hapvida_Webhook_Retry {
 
     /**
      * AJAX handler para forçar retry imediato de todos os pendentes.
-     * Protegido por nonce. Aceita request do admin e do shortcode público.
+     * Aceita request do admin e do shortcode público (com ou sem login).
      */
     public function ajax_force_retry() {
-        if (!check_ajax_referer('hapvida_force_retry_webhooks', 'nonce', false)) {
-            wp_send_json_error(array('message' => 'Nonce inválido ou expirado'));
+        // Sem verificacao de nonce: o shortcode de contagem e publico e pode
+        // estar em cache, o que invalida o nonce e quebra o botao. A acao
+        // apenas reenvia webhooks ja enfileirados (sem exposicao de dados),
+        // seguindo o mesmo padrao dos demais endpoints AJAX publicos do plugin.
+
+        // O processamento e sincrono e pode levar alguns segundos
+        if (function_exists('set_time_limit')) {
+            @set_time_limit(120);
         }
 
         // Destrava lock travado (TTL de 5min ainda assim limita abuso)
