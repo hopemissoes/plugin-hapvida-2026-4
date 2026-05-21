@@ -537,12 +537,6 @@ trait AdminVendorsTrait {
                         data-index="<?php echo esc_attr($index); ?>" title="Remover vendedor permanentemente">
                         <i class="dashicons dashicons-trash"></i> Remover
                     </button>
-
-                    <?php
-                    // Botoes Google Sheets (Criar, Atualizar, Ver)
-                    $vendor_nome = isset($vendedor['nome']) ? $vendedor['nome'] : '';
-                    Formulario_Hapvida_Google_Sheets::render_vendor_buttons($vendor_nome);
-                    ?>
                 </div>
             </td>
         </tr>

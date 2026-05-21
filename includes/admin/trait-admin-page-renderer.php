@@ -562,10 +562,6 @@ trait AdminPageRendererTrait {
                     <span class="dashicons dashicons-admin-generic"></span>
                     <span>Configurações</span>
                 </button>
-                <button class="hapvida-tab" data-tab="monitoramento">
-                    <span class="dashicons dashicons-visibility"></span>
-                    <span>Monitoramento</span>
-                </button>
                 <button class="hapvida-tab" data-tab="invoice">
                     <span class="dashicons dashicons-media-spreadsheet"></span>
                     <span>Invoice</span>
@@ -671,9 +667,6 @@ trait AdminPageRendererTrait {
                                         });
                                     })(jQuery);
                                     </script>
-
-                                    <!-- Google Sheets: area de configuracao -->
-                                    <?php Formulario_Hapvida_Google_Sheets::render_config_area(); ?>
 
                                     <!-- Dentro da seção de vendedores da página admin -->
                                     <div class="vendedores-table-wrapper">
@@ -786,6 +779,33 @@ trait AdminPageRendererTrait {
                         </div>
                     </div>
 
+                    <!-- 2.5. Banner Promocional -->
+                    <?php
+                    $options_promo = get_option($this->option_name);
+                    $promo_ativo = !isset($options_promo['promo_banner']) || $options_promo['promo_banner'] === '1';
+                    ?>
+                    <div class="hapvida-accordion">
+                        <button type="button" class="hapvida-accordion-header">
+                            <span class="hapvida-accordion-title">
+                                <span class="dashicons dashicons-megaphone"></span> Banner Promocional
+                                <span class="hapvida-accordion-badge <?php echo $promo_ativo ? 'badge-on' : 'badge-off'; ?>"><?php echo $promo_ativo ? 'Ativo' : 'Off'; ?></span>
+                            </span>
+                            <span class="hapvida-accordion-arrow dashicons dashicons-arrow-down-alt2"></span>
+                        </button>
+                        <div class="hapvida-accordion-body" style="display:none;">
+                            <form action="options.php" method="post">
+                                <?php settings_fields('formulario_hapvida_settings'); ?>
+                                <input type="hidden" name="<?php echo $this->option_name; ?>[promo_banner]" value="0" />
+                                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 12px 0;">
+                                    <input type="checkbox" id="promo_banner" name="<?php echo $this->option_name; ?>[promo_banner]" value="1" <?php checked($promo_ativo, true); ?> style="width:18px;height:18px;" />
+                                    <span>Exibir banner "15% OFF em 3x" com countdown no formulário</span>
+                                </label>
+                                <p class="description" style="margin-bottom: 14px;">Desative quando a promoção encerrar. O banner com contagem regressiva até o fim do mês será removido do formulário.</p>
+                                <?php submit_button('Salvar', 'primary', 'submit', false); ?>
+                            </form>
+                        </div>
+                    </div>
+
                     <!-- 3. Relatórios de Leads -->
                     <?php
                     $options = get_option($this->option_name);
@@ -883,226 +903,6 @@ trait AdminPageRendererTrait {
 
                 </div>
 
-                <!-- TAB: MONITORAMENTO -->
-                <div class="hapvida-tab-panel" data-tab="monitoramento">
-
-                <!-- MONITORAMENTO DE ENTREGAS (Evolution API) -->
-                <div class="hapvida-row">
-                    <div class="hapvida-column full-width">
-                        <div class="hapvida-card">
-                            <h2><i class="dashicons dashicons-visibility"></i> Monitoramento de Entregas (Evolution API)</h2>
-                            <p class="hapvida-auto-activate-desc" style="margin-bottom: 16px;">
-                                Monitora se os vendedores estão recebendo as mensagens via WhatsApp.
-                                Vendedores que não receberem confirmação de entrega em <strong>2 horas</strong> são inativados automaticamente.
-                            </p>
-
-                            <?php
-                            $settings_delivery = get_option($this->option_name, array());
-                            $auto_deact_enabled = isset($settings_delivery['enable_auto_deactivation']) ? $settings_delivery['enable_auto_deactivation'] : '1';
-                            ?>
-                            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px; padding: 14px 18px; background: <?php echo $auto_deact_enabled === '1' ? '#f0fdf4' : '#fef2f2'; ?>; border: 1px solid <?php echo $auto_deact_enabled === '1' ? '#bbf7d0' : '#fecaca'; ?>; border-radius: 10px;">
-                                <label style="position: relative; display: inline-block; width: 50px; height: 26px; cursor: pointer;">
-                                    <input type="checkbox" id="admin-toggle-auto-deactivation" <?php checked($auto_deact_enabled, '1'); ?> style="opacity: 0; width: 0; height: 0;">
-                                    <span style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: <?php echo $auto_deact_enabled === '1' ? '#22c55e' : '#cbd5e1'; ?>; border-radius: 26px; transition: .3s;"></span>
-                                    <span style="position: absolute; content: ''; height: 20px; width: 20px; left: <?php echo $auto_deact_enabled === '1' ? '26px' : '3px'; ?>; bottom: 3px; background-color: white; border-radius: 50%; transition: .3s;"></span>
-                                </label>
-                                <div>
-                                    <strong style="color: <?php echo $auto_deact_enabled === '1' ? '#166534' : '#991b1b'; ?>;" id="admin-auto-deact-label">
-                                        <?php echo $auto_deact_enabled === '1' ? 'Inativacao automatica ATIVADA' : 'Inativacao automatica DESATIVADA'; ?>
-                                    </strong>
-                                    <p style="margin: 2px 0 0; font-size: 12px; color: #64748b;">
-                                        Vendedores sem confirmacao de entrega em 2h serao inativados automaticamente (horario comercial).
-                                    </p>
-                                </div>
-                            </div>
-                            <script>
-                            (function(){
-                                var toggle = document.getElementById('admin-toggle-auto-deactivation');
-                                if (!toggle) return;
-                                toggle.addEventListener('change', function(){
-                                    var enabled = this.checked ? '1' : '0';
-                                    var container = this.closest('div[style*="display: flex"]');
-                                    var label = document.getElementById('admin-auto-deact-label');
-                                    var slider = this.nextElementSibling;
-                                    var knob = slider.nextElementSibling;
-
-                                    if (this.checked) {
-                                        container.style.background = '#f0fdf4';
-                                        container.style.borderColor = '#bbf7d0';
-                                        slider.style.backgroundColor = '#22c55e';
-                                        knob.style.left = '26px';
-                                        label.style.color = '#166534';
-                                        label.textContent = 'Inativacao automatica ATIVADA';
-                                    } else {
-                                        container.style.background = '#fef2f2';
-                                        container.style.borderColor = '#fecaca';
-                                        slider.style.backgroundColor = '#cbd5e1';
-                                        knob.style.left = '3px';
-                                        label.style.color = '#991b1b';
-                                        label.textContent = 'Inativacao automatica DESATIVADA';
-                                    }
-
-                                    var formData = new FormData();
-                                    formData.append('action', 'toggle_auto_deactivation');
-                                    formData.append('enabled', enabled);
-                                    fetch('<?php echo admin_url("admin-ajax.php"); ?>', { method: 'POST', body: formData });
-                                });
-                            })();
-                            </script>
-
-                            <?php
-                            $pending_deliveries = get_option('hapvida_pending_deliveries', array());
-                            $deactivation_log = get_option('hapvida_auto_deactivation_log', array());
-
-                            $count_pendentes = 0;
-                            $count_entregues = 0;
-                            $count_expirados = 0;
-                            foreach ($pending_deliveries as $d) {
-                                switch ($d['status']) {
-                                    case 'pendente': $count_pendentes++; break;
-                                    case 'entregue': $count_entregues++; break;
-                                    case 'expirado': $count_expirados++; break;
-                                }
-                            }
-                            ?>
-
-                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px;">
-                                <div style="background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; padding: 16px; text-align: center;">
-                                    <div style="font-size: 28px; font-weight: 700; color: #d97706;"><?php echo $count_pendentes; ?></div>
-                                    <div style="font-size: 13px; color: #92400e;">Pendentes</div>
-                                </div>
-                                <div style="background: #d1fae5; border: 1px solid #10b981; border-radius: 8px; padding: 16px; text-align: center;">
-                                    <div style="font-size: 28px; font-weight: 700; color: #059669;"><?php echo $count_entregues; ?></div>
-                                    <div style="font-size: 13px; color: #065f46;">Entregues</div>
-                                </div>
-                                <div style="background: #fee2e2; border: 1px solid #ef4444; border-radius: 8px; padding: 16px; text-align: center;">
-                                    <div style="font-size: 28px; font-weight: 700; color: #dc2626;"><?php echo $count_expirados; ?></div>
-                                    <div style="font-size: 13px; color: #991b1b;">Expirados (Vendedor Inativado)</div>
-                                </div>
-                            </div>
-
-                            <?php if (($count_pendentes + $count_entregues + $count_expirados) > 0 || !empty($deactivation_log)): ?>
-                            <div style="margin-bottom: 20px;">
-                                <button type="button" id="admin-clear-delivery-records" class="button button-secondary" style="color: #dc2626; border-color: #fca5a5; background: #fff;">
-                                    <span class="dashicons dashicons-trash" style="margin-top: 3px;"></span> Limpar Registros de Entregas
-                                </button>
-                            </div>
-                            <script>
-                            (function(){
-                                var btn = document.getElementById('admin-clear-delivery-records');
-                                if (!btn) return;
-                                btn.addEventListener('click', function(){
-                                    if (!confirm('Tem certeza que deseja limpar todos os registros de monitoramento de entregas?\n\nIsso vai remover:\n- Todas as entregas (pendentes, entregues, expiradas)\n- Todo o log de inativacoes automaticas\n\nEsta acao nao pode ser desfeita.')) return;
-                                    btn.disabled = true;
-                                    btn.textContent = 'Limpando...';
-                                    var formData = new FormData();
-                                    formData.append('action', 'clear_delivery_records');
-                                    fetch('<?php echo admin_url("admin-ajax.php"); ?>', { method: 'POST', body: formData })
-                                    .then(function(r) { return r.json(); })
-                                    .then(function(res) {
-                                        if (res.success) {
-                                            location.reload();
-                                        } else {
-                                            alert('Erro ao limpar registros');
-                                            btn.disabled = false;
-                                            btn.innerHTML = '<span class="dashicons dashicons-trash" style="margin-top: 3px;"></span> Limpar Registros de Entregas';
-                                        }
-                                    })
-                                    .catch(function() {
-                                        alert('Erro ao limpar registros');
-                                        btn.disabled = false;
-                                        btn.innerHTML = '<span class="dashicons dashicons-trash" style="margin-top: 3px;"></span> Limpar Registros de Entregas';
-                                    });
-                                });
-                            })();
-                            </script>
-                            <?php endif; ?>
-
-                            <?php if (!empty($deactivation_log)): ?>
-                                <h3 style="margin: 20px 0 10px; font-size: 15px; color: #dc2626;">Inativações Automáticas Recentes</h3>
-                                <table class="widefat striped" style="font-size: 13px;">
-                                    <thead>
-                                        <tr>
-                                            <th>Vendedor</th>
-                                            <th>Telefone</th>
-                                            <th>Grupo</th>
-                                            <th>Lead</th>
-                                            <th>Enviado em</th>
-                                            <th>Inativado em</th>
-                                            <th>Motivo</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <?php foreach (array_reverse(array_slice($deactivation_log, -10)) as $log_entry): ?>
-                                        <tr>
-                                            <td><strong><?php echo esc_html($log_entry['vendedor_nome']); ?></strong></td>
-                                            <td><?php echo esc_html($log_entry['vendedor_telefone']); ?></td>
-                                            <td><span style="background: <?php echo $log_entry['grupo'] === 'drv' ? '#dbeafe' : '#fff7ed'; ?>; padding: 2px 8px; border-radius: 4px; font-size: 11px;"><?php echo esc_html(strtoupper($log_entry['grupo'])); ?></span></td>
-                                            <td><code><?php echo esc_html($log_entry['lead_id']); ?></code></td>
-                                            <td><?php echo esc_html($log_entry['enviado_em']); ?></td>
-                                            <td><?php echo esc_html($log_entry['inativado_em']); ?></td>
-                                            <td style="color: #dc2626;"><?php echo esc_html($log_entry['motivo']); ?></td>
-                                        </tr>
-                                        <?php endforeach; ?>
-                                    </tbody>
-                                </table>
-                            <?php else: ?>
-                                <div class="hapvida-alert success">
-                                    <strong>Nenhuma inativação automática registrada.</strong>
-                                </div>
-                            <?php endif; ?>
-
-                            <?php if ($count_pendentes > 0): ?>
-                                <h3 style="margin: 20px 0 10px; font-size: 15px; color: #d97706;">Entregas Pendentes</h3>
-                                <table class="widefat striped" style="font-size: 13px;">
-                                    <thead>
-                                        <tr>
-                                            <th>Vendedor</th>
-                                            <th>Telefone</th>
-                                            <th>Lead</th>
-                                            <th>Enviado em</th>
-                                            <th>Tempo restante</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <?php foreach ($pending_deliveries as $delivery):
-                                            if ($delivery['status'] !== 'pendente') continue;
-                                            $elapsed = time() - $delivery['enviado_timestamp'];
-                                            $remaining = 7200 - $elapsed;
-                                            $remaining_min = max(0, round($remaining / 60));
-                                        ?>
-                                        <tr>
-                                            <td><strong><?php echo esc_html($delivery['vendedor_nome']); ?></strong></td>
-                                            <td><?php echo esc_html($delivery['vendedor_telefone']); ?></td>
-                                            <td><code><?php echo esc_html($delivery['lead_id']); ?></code></td>
-                                            <td><?php echo esc_html($delivery['enviado_em']); ?></td>
-                                            <td>
-                                                <?php if ($remaining_min > 0): ?>
-                                                    <span style="color: #d97706; font-weight: 600;"><?php echo $remaining_min; ?> min</span>
-                                                <?php else: ?>
-                                                    <span style="color: #dc2626; font-weight: 600;">Expirado (aguardando cron)</span>
-                                                <?php endif; ?>
-                                            </td>
-                                        </tr>
-                                        <?php endforeach; ?>
-                                    </tbody>
-                                </table>
-                            <?php endif; ?>
-
-                            <div style="margin-top: 16px; padding: 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px;">
-                                <p style="margin: 0 0 8px; font-size: 13px; font-weight: 600;">Endpoint para Evolution API:</p>
-                                <code style="display: block; padding: 8px; background: #1e293b; color: #22d3ee; border-radius: 4px; font-size: 12px; word-break: break-all;">
-                                    POST <?php echo esc_html(rest_url('formulario-hapvida/v1/evolution-webhook')); ?>
-                                </code>
-                                <p style="margin: 8px 0 0; font-size: 12px; color: #64748b;">
-                                    Configure este endpoint na sua Evolution API ou n8n para receber confirmações de entrega de mensagens.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                </div>
 
                 <!-- TAB: INVOICE -->
                 <div class="hapvida-tab-panel" data-tab="invoice">
@@ -1176,6 +976,126 @@ trait AdminPageRendererTrait {
                 <div class="hapvida-tab-panel" data-tab="stats">
                 <div class="hapvida-row">
                     <div class="hapvida-column full-width">
+                        <?php
+                        $all_webhooks = get_option('formulario_hapvida_failed_webhooks', array());
+                        $sent_count = 0;
+                        $pending_count = 0;
+                        foreach ($all_webhooks as $w) {
+                            $status = isset($w['status']) ? $w['status'] : '';
+                            if ($status === 'sent') {
+                                $sent_count++;
+                            } elseif ($status === 'pending' || $status === 'pending_retry') {
+                                $pending_count++;
+                            }
+                        }
+                        ?>
+                        <div class="hapvida-card" style="margin-bottom: 20px;">
+                            <h2><i class="dashicons dashicons-trash"></i> Limpeza de Webhooks</h2>
+                            <p class="hapvida-auto-activate-desc" style="margin-bottom: 16px;">
+                                Webhooks com status <strong>"enviado"</strong> (sucesso) ficam salvos para histórico.
+                                Para evitar que a opção do banco cresça muito, eles são removidos automaticamente
+                                <strong>a cada 12 horas</strong> por um cron. Você também pode limpar manualmente abaixo.
+                            </p>
+                            <div style="display: flex; align-items: center; gap: 16px; padding: 14px 18px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px;">
+                                <div style="flex: 1;">
+                                    <strong style="font-size: 16px; color: #334155;">
+                                        <?php echo number_format($sent_count, 0, ',', '.'); ?>
+                                    </strong>
+                                    <span style="color: #64748b;">webhook(s) com status "enviado" na fila</span>
+                                </div>
+                                <button type="button" id="hapvida-clear-sent-webhooks" class="button button-secondary" <?php echo $sent_count === 0 ? 'disabled' : ''; ?>>
+                                    <span class="dashicons dashicons-trash" style="margin-top: 3px;"></span>
+                                    Limpar Enviados Agora
+                                </button>
+                            </div>
+                            <div id="hapvida-clear-sent-result" style="margin-top: 10px;"></div>
+
+                            <hr style="margin: 20px 0; border: none; border-top: 1px solid #e2e8f0;">
+
+                            <p class="hapvida-auto-activate-desc" style="margin-bottom: 16px;">
+                                <strong>Webhooks pendentes</strong> (status "pending" ou "pending_retry") sao leads
+                                aguardando reenvio pelo cron. Use este botao para descartar leads antigos que
+                                voce nao quer mais que sejam reenviados.
+                            </p>
+                            <div style="display: flex; align-items: center; gap: 16px; padding: 14px 18px; background: #fff7ed; border: 1px solid #fed7aa; border-radius: 10px;">
+                                <div style="flex: 1;">
+                                    <strong style="font-size: 16px; color: #92400e;">
+                                        <?php echo number_format($pending_count, 0, ',', '.'); ?>
+                                    </strong>
+                                    <span style="color: #92400e;">webhook(s) pendente(s) na fila</span>
+                                </div>
+                                <button type="button" id="hapvida-clear-pending-webhooks" class="button" style="color: #b45309; border-color: #fcd34d; background: #fef3c7;" <?php echo $pending_count === 0 ? 'disabled' : ''; ?>>
+                                    <span class="dashicons dashicons-trash" style="margin-top: 3px;"></span>
+                                    Descartar Pendentes
+                                </button>
+                            </div>
+                            <div id="hapvida-clear-pending-result" style="margin-top: 10px;"></div>
+                        </div>
+                        <script>
+                        (function(){
+                            var btn = document.getElementById('hapvida-clear-sent-webhooks');
+                            if (!btn) return;
+                            btn.addEventListener('click', function(){
+                                if (!confirm('Limpar todos os webhooks com status "enviado"?\n\nIsso remove apenas leads ja processados com sucesso. Webhooks pendentes, em retry ou com falha NAO serao afetados.')) return;
+                                btn.disabled = true;
+                                var originalHtml = btn.innerHTML;
+                                btn.innerHTML = '<span class="dashicons dashicons-update spin" style="margin-top: 3px;"></span> Limpando...';
+                                var formData = new FormData();
+                                formData.append('action', 'hapvida_clear_sent_webhooks');
+                                formData.append('nonce', '<?php echo wp_create_nonce("hapvida_clear_sent_webhooks"); ?>');
+                                fetch('<?php echo admin_url("admin-ajax.php"); ?>', { method: 'POST', body: formData })
+                                .then(function(r){ return r.json(); })
+                                .then(function(res){
+                                    var result = document.getElementById('hapvida-clear-sent-result');
+                                    if (res.success) {
+                                        result.innerHTML = '<div class="hapvida-alert success" style="margin: 0;"><strong>' + res.data.removed + ' webhook(s) removido(s).</strong> Restam ' + res.data.remaining + ' na fila.</div>';
+                                        setTimeout(function(){ location.reload(); }, 1500);
+                                    } else {
+                                        result.innerHTML = '<div class="hapvida-alert error" style="margin: 0;">Erro: ' + (res.data && res.data.message ? res.data.message : 'desconhecido') + '</div>';
+                                        btn.disabled = false;
+                                        btn.innerHTML = originalHtml;
+                                    }
+                                })
+                                .catch(function(){
+                                    document.getElementById('hapvida-clear-sent-result').innerHTML = '<div class="hapvida-alert error" style="margin: 0;">Erro de conexao</div>';
+                                    btn.disabled = false;
+                                    btn.innerHTML = originalHtml;
+                                });
+                            });
+
+                            // Botao "Descartar Pendentes"
+                            var btnPending = document.getElementById('hapvida-clear-pending-webhooks');
+                            if (btnPending) {
+                                btnPending.addEventListener('click', function(){
+                                    if (!confirm('Descartar TODOS os webhooks com status "pending" ou "pending_retry"?\n\nLeads pendentes serao perdidos definitivamente e NAO serao reenviados.\nEsta acao nao pode ser desfeita.')) return;
+                                    btnPending.disabled = true;
+                                    var origHtml = btnPending.innerHTML;
+                                    btnPending.innerHTML = '<span class="dashicons dashicons-update spin" style="margin-top: 3px;"></span> Descartando...';
+                                    var formData = new FormData();
+                                    formData.append('action', 'hapvida_clear_pending_webhooks');
+                                    formData.append('nonce', '<?php echo wp_create_nonce("hapvida_clear_pending_webhooks"); ?>');
+                                    fetch('<?php echo admin_url("admin-ajax.php"); ?>', { method: 'POST', body: formData })
+                                    .then(function(r){ return r.json(); })
+                                    .then(function(res){
+                                        var result = document.getElementById('hapvida-clear-pending-result');
+                                        if (res.success) {
+                                            result.innerHTML = '<div class="hapvida-alert success" style="margin: 0;"><strong>' + res.data.removed + ' webhook(s) pendente(s) descartado(s).</strong> Restam ' + res.data.remaining + ' na fila.</div>';
+                                            setTimeout(function(){ location.reload(); }, 1500);
+                                        } else {
+                                            result.innerHTML = '<div class="hapvida-alert error" style="margin: 0;">Erro: ' + (res.data && res.data.message ? res.data.message : 'desconhecido') + '</div>';
+                                            btnPending.disabled = false;
+                                            btnPending.innerHTML = origHtml;
+                                        }
+                                    })
+                                    .catch(function(){
+                                        document.getElementById('hapvida-clear-pending-result').innerHTML = '<div class="hapvida-alert error" style="margin: 0;">Erro de conexao</div>';
+                                        btnPending.disabled = false;
+                                        btnPending.innerHTML = origHtml;
+                                    });
+                                });
+                            }
+                        })();
+                        </script>
                         <?php $this->render_daily_submissions_section(); ?>
                     </div>
                 </div>
@@ -2741,13 +2661,6 @@ trait AdminPageRendererTrait {
                 })();
                 </script>
 
-                <?php
-                // Google Sheets: CSS + Modal + JS
-                Formulario_Hapvida_Google_Sheets::render_css();
-                Formulario_Hapvida_Google_Sheets::render_modal();
-                Formulario_Hapvida_Google_Sheets::render_js();
-                ?>
-
                 <script type="text/javascript">
                     (function ($) {
                         // Configuração global do ajaxurl para frontend
@@ -2902,7 +2815,7 @@ trait AdminPageRendererTrait {
                                 html += '    <div class="webhook-detail"><strong>🏙️ Cidade:</strong> ' + (webhook.client_city || 'N/A') + '</div>';
                                 html += '    <div class="webhook-detail"><strong>👤 Vendedor:</strong> ' + (webhook.vendor_name || 'N/A') + '</div>';
                                 html += '    <div class="webhook-detail"><strong>🏢 Grupo:</strong> ' + (webhook.vendor_group || 'N/A') + '</div>';
-                                html += '    <div class="webhook-detail"><strong>🔄 Tentativas:</strong> ' + (webhook.attempts || 0) + '/' + (webhook.max_attempts || 3) + '</div>';
+                                html += '    <div class="webhook-detail"><strong>🔄 Tentativas:</strong> ' + (webhook.attempts || 0) + '/' + (webhook.max_attempts || 4) + '</div>';
                                 html += '    <div class="webhook-detail"><strong>⏰ Última tentativa:</strong> ' + (webhook.last_attempt || 'N/A') + '</div>';
                                 html += '  </div>';
 

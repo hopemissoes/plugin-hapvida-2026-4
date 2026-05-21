@@ -19,23 +19,123 @@ class Formulario_Hapvida_Webhook_Cleanup {
 
     public function __construct() {
         $this->log_file = WP_CONTENT_DIR . '/formulario_hapvida.log';
-        
-        // Agenda limpeza diária
+
+        // Registra intervalo de 12 horas
+        add_filter('cron_schedules', array($this, 'add_twelve_hours_interval'));
+
+        // Agenda limpeza diária e a cada 12h
         add_action('init', array($this, 'schedule_cleanup'));
         add_action('formulario_hapvida_daily_cleanup', array($this, 'daily_cleanup'));
-        
+        add_action('formulario_hapvida_cleanup_sent_webhooks', array($this, 'cleanup_sent_webhooks'));
+
+        // AJAX para limpeza manual via admin
+        add_action('wp_ajax_hapvida_clear_sent_webhooks', array($this, 'ajax_clear_sent_webhooks'));
+        add_action('wp_ajax_hapvida_clear_pending_webhooks', array($this, 'ajax_clear_pending_webhooks'));
+
         // Hook para desativar o plugin (limpa cron jobs)
         register_deactivation_hook(__FILE__, array($this, 'deactivate_cleanup'));
     }
 
     /**
-     * Agenda a limpeza diária
+     * Adiciona intervalo de 12 horas ao WP Cron
+     */
+    public function add_twelve_hours_interval($schedules) {
+        if (!isset($schedules['hapvida_twelve_hours'])) {
+            $schedules['hapvida_twelve_hours'] = array(
+                'interval' => 43200, // 12 horas
+                'display' => 'A cada 12 horas (Hapvida Cleanup Sent)'
+            );
+        }
+        return $schedules;
+    }
+
+    /**
+     * Agenda limpezas (diaria geral + a cada 12h dos enviados)
+     *
+     * Migracao: se houver um evento agendado com o intervalo/recurrence antigo
+     * (hapvida_three_hours ou interval = 10800), reagenda com o novo de 12h.
      */
     public function schedule_cleanup() {
         if (!wp_next_scheduled('formulario_hapvida_daily_cleanup')) {
             // Executa diariamente à meia-noite
             wp_schedule_event(strtotime('tomorrow'), 'daily', 'formulario_hapvida_daily_cleanup');
         }
+
+        // Migra cron antigo (3h) para o novo (12h) se necessario
+        if (function_exists('wp_get_scheduled_event')) {
+            $event = wp_get_scheduled_event('formulario_hapvida_cleanup_sent_webhooks');
+            if ($event && ($event->schedule !== 'hapvida_twelve_hours' || (isset($event->interval) && intval($event->interval) !== 43200))) {
+                wp_clear_scheduled_hook('formulario_hapvida_cleanup_sent_webhooks');
+                $this->log("Cron de cleanup_sent_webhooks migrado para intervalo de 12h");
+            }
+        }
+
+        if (!wp_next_scheduled('formulario_hapvida_cleanup_sent_webhooks')) {
+            // Executa a cada 12 horas a partir de agora
+            wp_schedule_event(time() + 3600, 'hapvida_twelve_hours', 'formulario_hapvida_cleanup_sent_webhooks');
+        }
+    }
+
+    /**
+     * Remove webhooks com status 'sent' (lead processado com sucesso)
+     */
+    public function cleanup_sent_webhooks() {
+        $result = $this->cleanup_by_status('sent');
+        $this->log("Cleanup automatico de enviados: {$result['removed']} removidos, {$result['remaining']} restantes");
+        return $result;
+    }
+
+    /**
+     * AJAX: Limpa webhooks enviados manualmente
+     */
+    public function ajax_clear_sent_webhooks() {
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => 'Sem permissao'), 403);
+            return;
+        }
+        check_ajax_referer('hapvida_clear_sent_webhooks', 'nonce');
+
+        $result = $this->cleanup_by_status('sent');
+        wp_send_json_success($result);
+    }
+
+    /**
+     * Remove TODOS os webhooks com status 'pending' ou 'pending_retry'
+     * (uteis quando ha leads pendentes antigos que nao serao mais reenviados)
+     */
+    public function cleanup_pending_webhooks() {
+        $failed_webhooks = get_option($this->failed_webhooks_option, array());
+        $original_count = count($failed_webhooks);
+
+        $cleaned_webhooks = array_filter($failed_webhooks, function($webhook) {
+            $status = isset($webhook['status']) ? $webhook['status'] : '';
+            return $status !== 'pending' && $status !== 'pending_retry';
+        });
+
+        $removed_count = $original_count - count($cleaned_webhooks);
+        if ($removed_count > 0) {
+            update_option($this->failed_webhooks_option, array_values($cleaned_webhooks));
+            $this->log("Limpeza pendentes manual: {$removed_count} removidos, " . count($cleaned_webhooks) . " restantes");
+        }
+
+        return array(
+            'removed' => $removed_count,
+            'remaining' => count($cleaned_webhooks)
+        );
+    }
+
+    /**
+     * AJAX: Limpa webhooks pendentes (pending + pending_retry)
+     */
+    public function ajax_clear_pending_webhooks() {
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => 'Sem permissao'), 403);
+            return;
+        }
+        check_ajax_referer('hapvida_clear_pending_webhooks', 'nonce');
+
+        $result = $this->cleanup_pending_webhooks();
+        wp_send_json_success($result);
     }
 
     /**
@@ -252,6 +352,7 @@ class Formulario_Hapvida_Webhook_Cleanup {
      */
     public function deactivate_cleanup() {
         wp_clear_scheduled_hook('formulario_hapvida_daily_cleanup');
+        wp_clear_scheduled_hook('formulario_hapvida_cleanup_sent_webhooks');
         wp_clear_scheduled_hook('formulario_hapvida_retry_webhooks');
     }
 

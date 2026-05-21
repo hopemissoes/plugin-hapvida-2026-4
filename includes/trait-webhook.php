@@ -12,9 +12,10 @@ trait WebhookTrait {
             // Garante que sempre tem um ID único
             $webhook_id = 'webhook_' . time() . '_' . wp_rand(1000, 9999);
 
-            // Schedule de retry em background: 2min, 5min, 10min
-            $retry_intervals = array(2, 5, 10);
-            $next_retry_minutes = isset($retry_intervals[0]) ? $retry_intervals[0] : 2;
+            // Schedule de retry em background (cron servidor 3 min): 3, 6, 9, 12 min
+            // 4 tentativas: 1ª em +3, 2ª em +6, 3ª em +9, 4ª em +12 (entre cada falha)
+            $retry_intervals = array(3, 6, 9, 12);
+            $next_retry_minutes = isset($retry_intervals[0]) ? $retry_intervals[0] : 3;
 
             $entry = array(
                 'id' => $webhook_id,
@@ -22,7 +23,7 @@ trait WebhookTrait {
                 'data' => $webhook_data,
                 'status' => $status,
                 'attempts' => 0,
-                'max_attempts' => 3,
+                'max_attempts' => 4,
                 'created_at' => current_time('mysql'),
                 'last_attempt' => current_time('mysql'),
                 'error' => $error_message,
@@ -43,6 +44,18 @@ trait WebhookTrait {
             $result = update_option($this->failed_webhooks_option, $failed_webhooks);
 
             error_log("✅ [DEBUG] Webhook salvo - ID: {$webhook_id}, Status: {$status}, Resultado: " . ($result ? 'sucesso' : 'falha'));
+
+            // *** GARANTIA: agenda single event para o retry, mesmo se o cron recorrente falhar ***
+            if ($status === 'pending_retry') {
+                $delay_seconds = max(60, intval($next_retry_minutes) * 60);
+                $target_time = time() + $delay_seconds;
+                // Verifica se ja nao ha um single event proximo para evitar duplicacao
+                $existing = wp_next_scheduled('formulario_hapvida_retry_webhooks');
+                if (!$existing || abs($existing - $target_time) > 60) {
+                    wp_schedule_single_event($target_time, 'formulario_hapvida_retry_webhooks');
+                    error_log("🔔 [DEBUG] Single event de retry agendado para " . date('Y-m-d H:i:s', $target_time) . " (em {$next_retry_minutes} min)");
+                }
+            }
 
             return true;
 
@@ -238,25 +251,4 @@ trait WebhookTrait {
         );
     }
 
-    /**
-     * AJAX para retry manual de webhooks (para usar na admin)
-     */
-    public function ajax_retry_failed_webhooks()
-    {
-        check_ajax_referer('retry_webhooks_nonce', 'security');
-
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error('Permissão negada');
-        }
-
-        $failed_webhooks = get_option($this->failed_webhooks_option, array());
-        $pending_count = count(array_filter($failed_webhooks, function ($w) {
-            return in_array($w['status'], array('pending', 'pending_retry'));
-        }));
-
-        wp_send_json_success(array(
-            'message' => 'Processo de retry executado com sucesso',
-            'pending_webhooks' => $pending_count
-        ));
-    }
 }

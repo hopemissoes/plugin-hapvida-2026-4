@@ -92,11 +92,6 @@ trait AdminShortcodeTrait {
                 </div>
             </div>
 
-            <!-- SEÇÃO: MONITORAMENTO DE ENTREGAS -->
-            <div class="dashboard-section delivery-tracking-section">
-                <?php $this->render_delivery_tracking_frontend(); ?>
-            </div>
-
             <!-- ⭐ NOVA SEÇÃO: GERENCIAMENTO DE VENDEDORES -->
             <div class="dashboard-section vendors-management-section">
                 <?php $this->render_vendors_management_frontend(); ?>
@@ -426,6 +421,37 @@ trait AdminShortcodeTrait {
                 cursor: not-allowed;
             }
 
+            #force-retry-webhooks {
+                background: #0054B8;
+                color: white;
+                box-shadow: 0 4px 12px rgba(0, 84, 184, 0.2);
+                margin-left: 8px;
+            }
+
+            #force-retry-webhooks:hover {
+                background: #003f8a;
+                box-shadow: 0 6px 16px rgba(0, 84, 184, 0.3);
+                transform: translateY(-2px);
+            }
+
+            #force-retry-webhooks:disabled {
+                opacity: 0.6;
+                cursor: not-allowed;
+                transform: none;
+            }
+
+            #force-retry-feedback {
+                margin-left: 10px;
+                font-size: 13px;
+                font-weight: 600;
+                opacity: 0;
+                transition: opacity 0.3s;
+            }
+
+            #force-retry-feedback.visible { opacity: 1; }
+            #force-retry-feedback.success { color: #155724; }
+            #force-retry-feedback.error { color: #721c24; }
+
             /* ======================== MODAL DE LEADS ======================== */
             .hapvida-lead-modal-frontend {
                 position: fixed;
@@ -638,7 +664,7 @@ trait AdminShortcodeTrait {
                 }
 
                 var autoRefreshInterval = null;
-                var refreshInterval = 30000; // 30 segundos
+                var refreshInterval = 10000; // 10 segundos
 
                 // Função para atualizar as contagens
                 function updateCounts() {
@@ -748,7 +774,7 @@ trait AdminShortcodeTrait {
                     // Carrega dados iniciais
                     updateCounts();
 
-                    // Auto-refresh a cada 30 segundos
+                    // Auto-refresh a cada 10 segundos
                     autoRefreshInterval = setInterval(function () {
                         console.log('⏰ Auto-refresh...');
                         updateCounts();
@@ -779,14 +805,19 @@ trait AdminShortcodeTrait {
             }
         }
 
+        $force_retry_nonce = wp_create_nonce('hapvida_force_retry_webhooks');
         echo '<div class="section-header">';
         echo '<h2><i class="fas fa-users"></i> Todos os Leads Recebidos</h2>';
         echo '<button id="force-update-leads" class="control-btn secondary small" style="margin-left: auto;">';
         echo '<i class="fas fa-sync-alt"></i> Atualizar Agora';
         echo '</button>';
+        echo '<button id="force-retry-webhooks" class="control-btn small" data-nonce="' . esc_attr($force_retry_nonce) . '">';
+        echo '<i class="fas fa-paper-plane"></i> Forçar Reenvio';
+        echo '</button>';
+        echo '<span id="force-retry-feedback"></span>';
         echo '</div>';
 
-        // Calcula estatísticas
+        // Calcula estatísticas (status reais: sent, pending_retry, permanent_failure)
         $stats = array(
             'total' => count($all_webhooks),
             'pending' => 0,
@@ -795,14 +826,16 @@ trait AdminShortcodeTrait {
         );
 
         foreach ($all_webhooks as $webhook) {
-            if (isset($webhook['status'])) {
-                if ($webhook['status'] === 'success' || $webhook['status'] === 'completed') {
-                    $stats['completed']++;
-                } elseif ($webhook['status'] === 'pending') {
-                    $stats['pending']++;
-                } elseif ($webhook['status'] === 'failed') {
-                    $stats['failed']++;
-                }
+            if (!isset($webhook['status'])) {
+                continue;
+            }
+            $st = $webhook['status'];
+            if ($st === 'sent' || $st === 'success' || $st === 'completed') {
+                $stats['completed']++;
+            } elseif ($st === 'pending_retry' || $st === 'pending') {
+                $stats['pending']++;
+            } elseif ($st === 'permanent_failure' || $st === 'failed') {
+                $stats['failed']++;
             }
         }
 
@@ -835,7 +868,7 @@ trait AdminShortcodeTrait {
         // Cards de estatísticas
         echo '<div class="webhook-stats">';
         echo '<div class="webhook-stat-card total">';
-        echo '<div class="webhook-stat-number status-total">' . $stats['total'] . '</div>';
+        echo '<div class="webhook-stat-number status-total" id="leads-stats-total">' . $stats['total'] . '</div>';
         echo '<div class="webhook-stat-label">Total de Leads</div>';
         echo '</div>';
 

@@ -166,7 +166,7 @@ trait AjaxHandlersTrait {
                     'vendor_name' => $webhook_data['atendente'] ?? 'N/A',
                     'vendor_group' => strtoupper($webhook_data['grupo'] ?? 'N/A'),
                     'attempts' => $webhook['attempts'] ?? 0,
-                    'max_attempts' => $webhook['max_attempts'] ?? 3,
+                    'max_attempts' => $webhook['max_attempts'] ?? 4,
                     'created_at' => date('d/m H:i', strtotime($webhook['created_at'])),
                     'error_message' => isset($webhook['error']) ? substr($webhook['error'], 0, 100) : 'N/A'
                 );

@@ -371,10 +371,26 @@ trait ShortcodeFormTrait {
             }
 
             .hapvida-secure-notice span {
-                color: #8ea4b8;
-                font-size: 11px;
+                color: #475569;
+                font-size: 13px;
                 font-weight: 500;
                 font-family: 'Open Sans', sans-serif;
+                line-height: 1.4;
+                text-align: center;
+            }
+
+            .hapvida-secure-notice span strong {
+                display: block;
+                font-size: 15px;
+                font-weight: 700;
+                margin-bottom: 2px;
+            }
+
+            .hapvida-secure-notice .hapvida-secure-emoji {
+                display: inline-block;
+                margin-right: 6px;
+                font-size: 15px;
+                vertical-align: -1px;
             }
 
             /* ===== VALIDATION STATES ===== */
@@ -1021,11 +1037,70 @@ trait ShortcodeFormTrait {
                     font-size: 13px;
                     padding: 10px;
                 }
+
+                .hapvida-promo-banner .hapvida-promo-label { font-size: 14px !important; }
+                .hapvida-promo-banner .hapvida-promo-label strong { font-size: 15px !important; }
+                .hapvida-promo-banner .hapvida-promo-timer .hapvida-cd-num { font-size: 18px !important; }
+                .hapvida-promo-banner .hapvida-promo-timer .hapvida-cd-block { min-width: 38px !important; padding: 5px 6px !important; }
+            }
+
+            /* === PROMO BANNER === */
+            .hapvida-promo-banner {
+                background: linear-gradient(135deg, #ff6b00, #e85d00) !important;
+                border-radius: 10px !important;
+                padding: 16px 20px !important;
+                margin-bottom: 16px !important;
+                color: #fff !important;
+                text-align: center !important;
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+                box-sizing: border-box !important;
+            }
+            .hapvida-promo-banner .hapvida-promo-label {
+                font-size: 16px !important;
+                font-weight: 700 !important;
+                display: block !important;
+                margin-bottom: 10px !important;
+                color: #fff !important;
+            }
+            .hapvida-promo-banner .hapvida-promo-label strong {
+                font-size: 18px !important;
+                font-weight: 900 !important;
+            }
+            .hapvida-promo-banner .hapvida-promo-timer {
+                display: flex !important;
+                justify-content: center !important;
+                gap: 8px !important;
+                flex-wrap: nowrap !important;
+            }
+            .hapvida-promo-banner .hapvida-promo-timer .hapvida-cd-block {
+                background: rgba(0,0,0,0.2) !important;
+                border-radius: 6px !important;
+                padding: 6px 8px !important;
+                min-width: 44px !important;
+                text-align: center !important;
+                box-sizing: border-box !important;
+            }
+            .hapvida-promo-banner .hapvida-promo-timer .hapvida-cd-num {
+                font-size: 22px !important;
+                font-weight: 800 !important;
+                font-variant-numeric: tabular-nums !important;
+                line-height: 1.2 !important;
+                display: block !important;
+                color: #fff !important;
+            }
+            .hapvida-promo-banner .hapvida-promo-timer .hapvida-cd-lbl {
+                font-size: 10px !important;
+                text-transform: uppercase !important;
+                opacity: 0.85;
+                letter-spacing: 0.5px !important;
+                display: block !important;
+                color: #fff !important;
+                margin-top: 2px !important;
             }
                 </style>
 
                 <!-- HTML DO FORMULARIO -->
-                <div class="hapvida-form-container no-lazy">
+                <div class="hapvida-form-container">
                     <?php if (!$sem_titulo): ?>
                     <div class="hapvida-form-header">
                         <div class="hapvida-form-title">
@@ -1038,7 +1113,25 @@ trait ShortcodeFormTrait {
                         </div>
                     </div>
                     <?php endif; ?>
-                    <form class="hapvida-form no-lazy" id="hapvida-main-form">
+
+                    <!-- Banner Promocional com Countdown -->
+                    <?php
+                    $promo_opts = get_option('formulario_hapvida_settings', array());
+                    $show_promo = !isset($promo_opts['promo_banner']) || $promo_opts['promo_banner'] === '1';
+                    if ($show_promo):
+                    ?>
+                    <div class="hapvida-promo-banner">
+                        <span class="hapvida-promo-label"><strong>15% OFF em 3x</strong> &mdash; oferta acaba em:</span>
+                        <div class="hapvida-promo-timer">
+                            <div class="hapvida-cd-block"><span class="hapvida-cd-num hapvida-cd-days">00</span><span class="hapvida-cd-lbl">DIAS</span></div>
+                            <div class="hapvida-cd-block"><span class="hapvida-cd-num hapvida-cd-hours">00</span><span class="hapvida-cd-lbl">HORAS</span></div>
+                            <div class="hapvida-cd-block"><span class="hapvida-cd-num hapvida-cd-mins">00</span><span class="hapvida-cd-lbl">MIN</span></div>
+                            <div class="hapvida-cd-block"><span class="hapvida-cd-num hapvida-cd-secs">00</span><span class="hapvida-cd-lbl">SEG</span></div>
+                        </div>
+                    </div>
+                    <?php endif; ?>
+
+                    <form class="hapvida-form" id="hapvida-main-form">
                         <!-- Nome Completo -->
                         <div class="hapvida-field" id="hapvida-field-name">
                             <span class="hapvida-field-icon">
@@ -1125,7 +1218,7 @@ trait ShortcodeFormTrait {
                                 <input type="number" id="hapvida-qtd-pessoas" name="form_fields[qtd_pessoas]"
                                     placeholder="Nº Pessoas" value="1" min="1" max="20" required autocomplete="off">
                             </div>
-                            <div class="age-inputs no-lazy" id="hapvida-age-inputs">
+                            <div class="age-inputs" id="hapvida-age-inputs">
                                 <div class="hapvida-field">
                                     <span class="hapvida-field-icon">
                                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1146,36 +1239,32 @@ trait ShortcodeFormTrait {
                         <input type="hidden" name="form_fields[atendente]" value="">
 
                         <!-- Botão de Envio -->
-                        <button type="submit" class="hapvida-submit-btn no-lazy" id="hapvida-submit-btn">
+                        <button type="submit" class="hapvida-submit-btn" id="hapvida-submit-btn">
                             <span class="hapvida-btn-text">Solicitar Cotação</span>
                         </button>
 
-                        <!-- Secure Notice -->
+                        <!-- Reassurance Notice -->
                         <div class="hapvida-secure-notice">
-                            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke-width="2.5">
-                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                                <path d="M9 12l2 2 4-4"/>
-                            </svg>
-                            <span>Fique tranquilo, seus dados estão seguros</span>
+                            <span><strong><span class="hapvida-secure-emoji" aria-hidden="true">⚠️</span>Não iremos te incomodar,</strong>nós também odiamos vendedores chatos</span>
                         </div>
                     </form>
                 </div>
 
                 <!-- NOVO MODAL DE SUCESSO MELHORADO -->
-                <div id="hapvida-success-modal" class="hapvida-modal-success no-lazy">
+                <div id="hapvida-success-modal" class="hapvida-modal-success">
                     <div class="hapvida-modal-success-content">
                         <div class="hapvida-modal-success-header">
                             <div class="hapvida-success-check">
                                 <div class="hapvida-success-check-circle">
-                                    <i class="fas fa-check hapvida-success-check-icon no-lazy"></i>
+                                    <i class="fas fa-check hapvida-success-check-icon"></i>
                                 </div>
                             </div>
                             <h3 class="hapvida-modal-success-title" style="color: white;">
                                 Formulário Enviado com Sucesso!
                             </h3>
 
-                            <button type="button" class="hapvida-modal-success-close no-lazy" id="hapvida-modal-close">
-                                <i class="fas fa-times no-lazy"></i>
+                            <button type="button" class="hapvida-modal-success-close" id="hapvida-modal-close">
+                                <i class="fas fa-times"></i>
                             </button>
                         </div>
 
@@ -1188,7 +1277,7 @@ trait ShortcodeFormTrait {
 
                             <div class="hapvida-whatsapp-redirect">
                                 <div class="hapvida-whatsapp-content">
-                                    <i class="fab fa-whatsapp hapvida-whatsapp-icon no-lazy"></i>
+                                    <i class="fab fa-whatsapp hapvida-whatsapp-icon"></i>
                                     <span id="hapvida-redirect-text">
                                         Redirecionando para WhatsApp
                                         <span class="hapvida-loading-dots">
@@ -1223,6 +1312,35 @@ trait ShortcodeFormTrait {
                 </div>
 
                 <script>
+                    <?php if ($show_promo): ?>
+                    // === COUNTDOWN ATÉ FIM DO MÊS (suporta múltiplas instâncias) ===
+                    (function() {
+                        if (window._hapvidaCountdownActive) return;
+                        window._hapvidaCountdownActive = true;
+                        function pad(n) { return n < 10 ? '0' + n : n; }
+                        function updateAll(sel, val) {
+                            var els = document.querySelectorAll(sel);
+                            for (var i = 0; i < els.length; i++) { els[i].textContent = val; }
+                        }
+                        function updateCountdown() {
+                            var now = new Date();
+                            var endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+                            var diff = endOfMonth - now;
+                            if (diff <= 0) { diff = 0; }
+                            var d = Math.floor(diff / 86400000);
+                            var h = Math.floor((diff % 86400000) / 3600000);
+                            var m = Math.floor((diff % 3600000) / 60000);
+                            var s = Math.floor((diff % 60000) / 1000);
+                            updateAll('.hapvida-cd-days', pad(d));
+                            updateAll('.hapvida-cd-hours', pad(h));
+                            updateAll('.hapvida-cd-mins', pad(m));
+                            updateAll('.hapvida-cd-secs', pad(s));
+                        }
+                        updateCountdown();
+                        setInterval(updateCountdown, 1000);
+                    })();
+                    <?php endif; ?>
+
                             (function ($) {
                                    'use strict';
 
@@ -1509,18 +1627,18 @@ trait ShortcodeFormTrait {
                                     $('#hapvida-improved-modal').remove();
 
                                     const modalHtml = `
-            <div id="hapvida-improved-modal" class="hapvida-modal-success show no-lazy" style="z-index: 999999;">
+            <div id="hapvida-improved-modal" class="hapvida-modal-success show" style="z-index: 999999;">
                 <div class="hapvida-modal-success-content" style="max-width: 500px;">
                     <div class="hapvida-modal-success-header" style="background: ${color.bg}; color: ${color.text};">
                         <h3 style="margin: 0; font-size: 18px;">${title}</h3>
-                        <button type="button" class="hapvida-modal-success-close hapvida-close-btn no-lazy">
-                            <i class="fas fa-times no-lazy"></i>
+                        <button type="button" class="hapvida-modal-success-close hapvida-close-btn">
+                            <i class="fas fa-times"></i>
                         </button>
                     </div>
                     <div class="hapvida-modal-success-body">
                         ${message}
                         <div style="text-align: center; margin-top: 20px;">
-                            <button type="button" class="hapvida-close-btn no-lazy" 
+                            <button type="button" class="hapvida-close-btn" 
                                     style="background: ${color.bg}; color: ${color.text}; border: none; padding: 12px 30px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px;">
                                 Entendi
                             </button>

@@ -2,15 +2,16 @@
 /**
  * Sistema de Retry Automático de Webhooks em Background
  *
- * Fluxo: formulário tenta 1x rápido (5s). Se falhar, salva na fila.
- * Este cron roda a cada 2 minutos e reprocessa os webhooks da fila.
+ * Fluxo: formulário tenta 1x rápido (10s). Se falhar, salva na fila.
+ * Este cron roda a cada 2 minutos (efetivo: ~3 min, conforme cron do servidor).
  *
- * Schedule de retry:
- * - Tentativa 1: 2 minutos após falha
- * - Tentativa 2: 5 minutos após falha
- * - Tentativa 3: 10 minutos após falha
+ * Schedule de retry (4 tentativas, intervalos em minutos: 3, 6, 9, 12):
+ * - 1ª retry: 3 min após falha imediata
+ * - 2ª retry: 6 min após falha da 1ª
+ * - 3ª retry: 9 min após falha da 2ª
+ * - 4ª retry: 12 min após falha da 3ª
  *
- * Resolve em no máximo 10 minutos (falhas de DNS são breves).
+ * Pior caso (alinhado ao cron de 3 min): ~30-33 min para esgotar 4 tentativas.
  */
 
 if (!defined('ABSPATH')) {
@@ -38,6 +39,10 @@ class Formulario_Hapvida_Webhook_Retry {
 
         // Agenda o cron se não estiver agendado
         add_action('init', array($this, 'schedule_retry_cron'));
+
+        // AJAX para forçar retry de webhooks travados (admin + frontend logado/anônimo)
+        add_action('wp_ajax_hapvida_force_retry_webhooks', array($this, 'ajax_force_retry'));
+        add_action('wp_ajax_nopriv_hapvida_force_retry_webhooks', array($this, 'ajax_force_retry'));
 
         // Hook de desativação
         register_deactivation_hook(
@@ -71,9 +76,27 @@ class Formulario_Hapvida_Webhook_Retry {
 
     /**
      * Processa webhooks pendentes de retry
-     * Executado a cada 5 minutos via WP Cron
+     * Executado a cada 2 minutos via WP Cron (efetivo: ~3 min, conforme cron servidor)
      */
     public function process_pending_retries() {
+        $this->log("process_pending_retries chamado");
+
+        // Lock para impedir execuções simultaneas (race condition no update_option)
+        $lock_key = 'hapvida_retry_cron_lock';
+        if (get_transient($lock_key)) {
+            $this->log("Cron de retry ja em execucao - skip");
+            return;
+        }
+        set_transient($lock_key, time(), 300); // 5 min de safety
+
+        try {
+            $this->run_retry_processing();
+        } finally {
+            delete_transient($lock_key);
+        }
+    }
+
+    private function run_retry_processing() {
         $webhooks = get_option($this->failed_webhooks_option, array());
 
         if (empty($webhooks)) {
@@ -104,7 +127,7 @@ class Formulario_Hapvida_Webhook_Retry {
             }
 
             // Verifica se excedeu max_attempts
-            $max_attempts = isset($webhook['max_attempts']) ? intval($webhook['max_attempts']) : 3;
+            $max_attempts = isset($webhook['max_attempts']) ? intval($webhook['max_attempts']) : 4;
             $attempts = isset($webhook['attempts']) ? intval($webhook['attempts']) : 0;
 
             if ($attempts >= $max_attempts) {
@@ -162,16 +185,34 @@ class Formulario_Hapvida_Webhook_Retry {
                 $this->log("✅ RETRY SUCESSO: {$lead_id} enviado na tentativa background {$attempt_num}");
 
             } else {
+                $lead_id = isset($webhook['data']['lead_id']) ? $webhook['data']['lead_id'] : 'N/A';
+
+                // Erro definitivo (4xx exceto 408/429) - nao adianta retentar
+                if (!empty($result['definitive'])) {
+                    $webhook['status'] = 'permanent_failure';
+                    $webhook['error'] = "Erro definitivo no retry {$attempt_num}: " . $result['message'] . " - retries cancelados";
+                    error_log("HAPVIDA RETRY: ERRO DEFINITIVO para lead {$lead_id} - {$result['message']} - cancelando retries");
+                    $this->log("❌ ERRO DEFINITIVO: Lead {$lead_id} - {$result['message']} - retries cancelados");
+                    $fail_count++;
+                    continue;
+                }
+
                 // Falhou - calcula próximo retry
-                $retry_schedule = isset($webhook['retry_schedule']) ? $webhook['retry_schedule'] : array(2, 5, 10);
+                $retry_schedule = isset($webhook['retry_schedule']) ? $webhook['retry_schedule'] : array(3, 6, 9, 12);
                 $next_interval_index = min($attempt_num, count($retry_schedule) - 1);
                 $next_interval = $retry_schedule[$next_interval_index];
 
                 $webhook['next_retry'] = date('Y-m-d H:i:s', strtotime("+{$next_interval} minutes"));
                 $webhook['error'] = "Retry {$attempt_num} falhou: " . $result['message'] . " - Proximo retry em {$next_interval} minutos";
 
-                $lead_id = isset($webhook['data']['lead_id']) ? $webhook['data']['lead_id'] : 'N/A';
                 error_log("HAPVIDA RETRY: FALHA na tentativa {$attempt_num} para lead {$lead_id} - {$result['message']} - Proximo retry: {$webhook['next_retry']}");
+
+                // Garante que o proximo retry vai disparar - agenda single event
+                $target_time = time() + ($next_interval * 60);
+                $existing = wp_next_scheduled('formulario_hapvida_retry_webhooks');
+                if (!$existing || abs($existing - $target_time) > 60) {
+                    wp_schedule_single_event($target_time, 'formulario_hapvida_retry_webhooks');
+                }
 
                 // Se essa era a última tentativa, marca como falha permanente
                 if ($attempt_num >= $max_attempts) {
@@ -307,11 +348,21 @@ class Formulario_Hapvida_Webhook_Retry {
         $reset_count = 0;
 
         foreach ($webhooks as &$webhook) {
-            if ($webhook['status'] === 'pending_retry') {
+            $status = isset($webhook['status']) ? $webhook['status'] : '';
+
+            // Reenvio manual: torna elegivel agora tanto os que aguardam retry
+            // quanto os que ja esgotaram as tentativas (falha permanente).
+            if ($status === 'pending_retry' || $status === 'permanent_failure') {
+                if ($status === 'permanent_failure') {
+                    // Revive a falha permanente com um novo ciclo de tentativas
+                    $webhook['attempts'] = 0;
+                }
+                $webhook['status'] = 'pending_retry';
                 $webhook['next_retry'] = current_time('mysql'); // Torna elegível agora
                 $reset_count++;
             }
         }
+        unset($webhook);
 
         if ($reset_count > 0) {
             update_option($this->failed_webhooks_option, $webhooks);
@@ -321,6 +372,53 @@ class Formulario_Hapvida_Webhook_Retry {
         $this->process_pending_retries();
 
         return $reset_count;
+    }
+
+    /**
+     * AJAX handler para forçar retry imediato de todos os pendentes.
+     * Aceita request do admin e do shortcode público (com ou sem login).
+     */
+    public function ajax_force_retry() {
+        // Sem verificacao de nonce: o shortcode de contagem e publico e pode
+        // estar em cache, o que invalida o nonce e quebra o botao. A acao
+        // apenas reenvia webhooks ja enfileirados (sem exposicao de dados),
+        // seguindo o mesmo padrao dos demais endpoints AJAX publicos do plugin.
+
+        // O processamento e sincrono e pode levar alguns segundos
+        if (function_exists('set_time_limit')) {
+            @set_time_limit(120);
+        }
+
+        // Destrava lock travado (TTL de 5min ainda assim limita abuso)
+        delete_transient('hapvida_retry_cron_lock');
+
+        $webhooks = get_option($this->failed_webhooks_option, array());
+        $pending_before = 0;
+        foreach ($webhooks as $w) {
+            if (isset($w['status']) && $w['status'] === 'pending_retry') {
+                $pending_before++;
+            }
+        }
+
+        $reset_count = $this->force_retry_all();
+
+        // Recalcula quantos seguem pendentes
+        $webhooks_after = get_option($this->failed_webhooks_option, array());
+        $still_pending = 0;
+        $just_sent = 0;
+        foreach ($webhooks_after as $w) {
+            if (!isset($w['status'])) continue;
+            if ($w['status'] === 'pending_retry') $still_pending++;
+            elseif ($w['status'] === 'sent') $just_sent++;
+        }
+
+        wp_send_json_success(array(
+            'message' => "Forçado retry em {$reset_count} webhook(s). Restam {$still_pending} pendente(s).",
+            'reset_count' => $reset_count,
+            'still_pending' => $still_pending,
+            'pending_before' => $pending_before,
+            'sent_total' => $just_sent,
+        ));
     }
 
     /**

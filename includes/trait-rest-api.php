@@ -73,18 +73,44 @@ trait RestApiTrait {
 
         try {
 
+            // O processamento da fila e sincrono e pode levar alguns segundos
+            if (function_exists('set_time_limit')) {
+                @set_time_limit(120);
+            }
+
+            global $formulario_hapvida_webhook_retry;
+
+            // Processa a fila de webhooks pendentes (mesma rotina do WP-Cron).
+            // Essencial: garante o reenvio mesmo quando o WP-Cron nao dispara
+            // por falta de trafego no site. Aponte um cron externo (EasyCron)
+            // para este endpoint a cada 1-3 minutos.
+            $processed = false;
+            if (
+                isset($formulario_hapvida_webhook_retry) &&
+                is_object($formulario_hapvida_webhook_retry) &&
+                method_exists($formulario_hapvida_webhook_retry, 'process_pending_retries')
+            ) {
+                $formulario_hapvida_webhook_retry->process_pending_retries();
+                $processed = true;
+            } else {
+                $this->log("Cron externo: processador de webhooks indisponivel");
+            }
+
             $execution_time = round((microtime(true) - $start_time) * 1000, 2);
-            $this->log("✅ Cron externo concluído em {$execution_time}ms");
+            $this->log("Cron externo concluido em {$execution_time}ms (fila processada: " . ($processed ? 'sim' : 'nao') . ")");
 
             // Busca estatísticas para retorno
             $failed_webhooks = get_option($this->failed_webhooks_option, array());
             $pending_count = count(array_filter($failed_webhooks, function ($w) {
-                return $w['status'] === 'pending';
+                return isset($w['status']) && $w['status'] === 'pending_retry';
             }));
 
             return new WP_REST_Response(array(
                 'success' => true,
-                'message' => 'Cron executado com sucesso',
+                'message' => $processed
+                    ? 'Cron executado e fila de webhooks processada'
+                    : 'Cron executado, mas o processador de webhooks nao estava disponivel',
+                'queue_processed' => $processed,
                 'execution_time_ms' => $execution_time,
                 'timestamp' => current_time('Y-m-d H:i:s'),
                 'pending_webhooks' => $pending_count,

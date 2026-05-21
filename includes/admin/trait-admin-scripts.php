@@ -476,6 +476,9 @@ trait AdminScriptsTrait {
                                                     return;
                                                 }
 
+                                                // Atualiza o card "Total de Leads"
+                                                $('#leads-stats-total').text(leads.length);
+
                                                 if (leads.length === 0) {
                                                     tbody.html('<tr><td colspan="7" style="text-align:center;">Nenhum lead registrado</td></tr>');
                                                 } else {
@@ -566,6 +569,45 @@ trait AdminScriptsTrait {
                                         },
                                         complete: function () {
                                             btn.prop('disabled', false).html(originalText);
+                                        }
+                                    });
+                                });
+
+                                // Botão "Forçar Reenvio" — chama o cron de retry imediatamente
+                                $(document).on('click', '#force-retry-webhooks', function (e) {
+                                    e.preventDefault();
+                                    var btn = $(this);
+                                    if (btn.prop('disabled')) return;
+                                    var nonce = btn.data('nonce');
+                                    var feedback = $('#force-retry-feedback');
+                                    var originalText = btn.html();
+                                    btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Reenviando...');
+                                    feedback.removeClass('visible success error').text('');
+
+                                    $.ajax({
+                                        url: ajaxurl,
+                                        type: 'POST',
+                                        dataType: 'json',
+                                        timeout: 60000,
+                                        data: {
+                                            action: 'hapvida_force_retry_webhooks',
+                                            nonce: nonce
+                                        },
+                                        success: function (response) {
+                                            if (response && response.success) {
+                                                feedback.text(response.data.message).addClass('visible success');
+                                                $('#force-update-leads').trigger('click');
+                                            } else {
+                                                var msg = (response && response.data && response.data.message) ? response.data.message : 'Erro ao forçar retry';
+                                                feedback.text(msg).addClass('visible error');
+                                            }
+                                        },
+                                        error: function (xhr, status) {
+                                            feedback.text('Falha de rede: ' + status).addClass('visible error');
+                                        },
+                                        complete: function () {
+                                            btn.prop('disabled', false).html(originalText);
+                                            setTimeout(function () { feedback.removeClass('visible'); }, 8000);
                                         }
                                     });
                                 });
