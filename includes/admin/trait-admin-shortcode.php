@@ -147,6 +147,26 @@ trait AdminShortcodeTrait {
                 font-weight: 700;
             }
 
+            /* Cabeçalho da seção de leads: sem título, apenas os botões de ação.
+               flex-wrap faz os botões empilharem bem no mobile. */
+            .all-leads-header {
+                flex-wrap: wrap;
+                gap: 10px;
+                justify-content: flex-end;
+            }
+
+            @media (max-width: 600px) {
+                .all-leads-header .control-btn {
+                    flex: 1 1 100%;
+                    justify-content: center;
+                }
+                .all-leads-header #force-retry-feedback {
+                    flex: 1 1 100%;
+                    margin-left: 0;
+                    text-align: center;
+                }
+            }
+
             /* ======================== SEÇÃO 1: TODOS OS LEADS ======================== */
             .all-leads-section .webhook-stats {
                 display: grid;
@@ -425,7 +445,6 @@ trait AdminShortcodeTrait {
                 background: #0054B8;
                 color: white;
                 box-shadow: 0 4px 12px rgba(0, 84, 184, 0.2);
-                margin-left: 8px;
             }
 
             #force-retry-webhooks:hover {
@@ -806,9 +825,8 @@ trait AdminShortcodeTrait {
         }
 
         $force_retry_nonce = wp_create_nonce('hapvida_force_retry_webhooks');
-        echo '<div class="section-header">';
-        echo '<h2><i class="fas fa-users"></i> Todos os Leads Recebidos</h2>';
-        echo '<button id="force-update-leads" class="control-btn secondary small" style="margin-left: auto;">';
+        echo '<div class="section-header all-leads-header">';
+        echo '<button id="force-update-leads" class="control-btn secondary small">';
         echo '<i class="fas fa-sync-alt"></i> Atualizar Agora';
         echo '</button>';
         echo '<button id="force-retry-webhooks" class="control-btn small" data-nonce="' . esc_attr($force_retry_nonce) . '">';
