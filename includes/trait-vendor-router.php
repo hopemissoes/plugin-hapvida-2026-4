@@ -277,10 +277,9 @@ trait VendorRouterTrait {
 
                 // Compara os números
                 if ($vendedor_numero_limpo === $numero_limpo) {
-                    // Verifica se o vendedor está ativo
-                    if (isset($vendedor['status']) && $vendedor['status'] !== 'ativo') {
-                        return null;
-                    }
+                    // Rota por URL: entrega ao vendedor cadastrado mesmo se
+                    // estiver inativo. O sentido da rota e' justamente
+                    // bypassar a logica padrao (round-robin, status, etc).
 
                     // Adiciona informações do grupo
                     $vendedor['grupo'] = $grupo;
