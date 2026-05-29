@@ -853,13 +853,20 @@ trait AdminScriptsTrait {
                                                 continue;
 
                                             foreach ($vendedores_grupo as $vendedor) {
-                                                if (!isset($vendedor['numero']))
+                                                // Tenta numero primeiro, depois telefone (compatibilidade)
+                                                $numero_vendedor = '';
+                                                if (isset($vendedor['numero']) && !empty($vendedor['numero'])) {
+                                                    $numero_vendedor = $vendedor['numero'];
+                                                } elseif (isset($vendedor['telefone']) && !empty($vendedor['telefone'])) {
+                                                    $numero_vendedor = $vendedor['telefone'];
+                                                } else {
                                                     continue;
+                                                }
 
-                                                $numero_limpo = preg_replace('/[^0-9]/', '', $vendedor['numero']);
+                                                $numero_limpo = preg_replace('/[^0-9]/', '', $numero_vendedor);
                                                 if ($numero_limpo === $config['vendedor_numero']) {
-                                                    $vendedor_nome = $vendedor['nome'];
-                                                    $vendedor_numero_formatado = $vendedor['numero'];
+                                                    $vendedor_nome = isset($vendedor['nome']) ? $vendedor['nome'] : 'Sem nome';
+                                                    $vendedor_numero_formatado = $numero_vendedor;
                                                     break 2;
                                                 }
                                             }
