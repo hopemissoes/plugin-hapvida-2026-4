@@ -2352,10 +2352,13 @@ trait ShortcodeFormTrait {
                                 function pick(inst, city){
                                     inst.input.value = city;
                                     inst.select.value = city;
-                                    try { inst.select.dispatchEvent(new Event('change', { bubbles: true })); }
+                                    // bubbles:false — evita que o evento suba ate o popup/overlay
+                                    // e dispare handlers externos (Elementor, outros plugins) que
+                                    // possam reagir e fechar o popup.
+                                    try { inst.select.dispatchEvent(new Event('change', { bubbles: false })); }
                                     catch(e) {
                                         var ev = document.createEvent('Event');
-                                        ev.initEvent('change', true, true);
+                                        ev.initEvent('change', false, false);
                                         inst.select.dispatchEvent(ev);
                                     }
                                     closeList(inst);
