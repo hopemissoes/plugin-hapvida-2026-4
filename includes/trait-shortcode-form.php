@@ -2234,18 +2234,10 @@ trait ShortcodeFormTrait {
                                     var list = field.querySelector('.hapvida-cidade-list');
                                     if (!select || !list) return null;
 
-                                    // Move o dropdown para o <body> com position:fixed \u2014
-                                    // escapa de containers com overflow ou transform (popups).
-                                    if (list.parentNode !== document.body) {
-                                        document.body.appendChild(list);
-                                    }
-                                    // Garante ID unico se houver duplicacao (form renderizado 2x)
-                                    if (list.id && document.querySelectorAll('[id="' + list.id + '"]').length > 1) {
-                                        list.id = 'hapvida-cidade-list-' + Math.random().toString(36).slice(2, 8);
-                                        input.setAttribute('aria-controls', list.id);
-                                    }
-                                    list.style.position = 'fixed';
-                                    list.style.zIndex = '1000001';
+                                    // Mantem o dropdown DENTRO do field (posicionado absoluto via CSS).
+                                    // Se ele estivesse no <body>, plugins de popup (Elementor) iriam
+                                    // interpretar o click no dropdown como "click fora do popup" e
+                                    // fechariam o popup. Dentro do field, e' "dentro do popup".
 
                                     var cities = [];
                                     for (var i = 0; i < select.options.length; i++) {
@@ -2281,15 +2273,6 @@ trait ShortcodeFormTrait {
                                         }
                                     }, true);
 
-                                    // Fecha quando o input some do layout (popup fechado, por ex.)
-                                    if (typeof IntersectionObserver !== 'undefined') {
-                                        new IntersectionObserver(function(entries){
-                                            for (var i = 0; i < entries.length; i++) {
-                                                if (!entries[i].isIntersecting && !inst.list.hidden) closeList(inst);
-                                            }
-                                        }, { threshold: 0 }).observe(input);
-                                    }
-
                                     if (select.value && !input.value) input.value = select.value;
 
                                     input._hapvidaCidadeInit = inst;
@@ -2302,18 +2285,6 @@ trait ShortcodeFormTrait {
                                     var input = target.closest('.hapvida-cidade-search');
                                     if (!input) return null;
                                     return initFor(input);
-                                }
-
-                                function reposition(inst){
-                                    var r = inst.input.getBoundingClientRect();
-                                    if (r.width === 0 && r.height === 0) {
-                                        inst.list.hidden = true;
-                                        inst.input.setAttribute('aria-expanded', 'false');
-                                        return;
-                                    }
-                                    inst.list.style.top = (r.bottom + 4) + 'px';
-                                    inst.list.style.left = r.left + 'px';
-                                    inst.list.style.width = r.width + 'px';
                                 }
 
                                 function render(inst, query){
@@ -2340,7 +2311,6 @@ trait ShortcodeFormTrait {
                                 }
 
                                 function openList(inst){
-                                    reposition(inst);
                                     inst.list.hidden = false;
                                     inst.input.setAttribute('aria-expanded', 'true');
                                 }
@@ -2442,13 +2412,6 @@ trait ShortcodeFormTrait {
                                     }
                                 });
 
-                                function repositionAll(){
-                                    for (var i = 0; i < allInstances.length; i++) {
-                                        if (!allInstances[i].list.hidden) reposition(allInstances[i]);
-                                    }
-                                }
-                                window.addEventListener('scroll', repositionAll, true);
-                                window.addEventListener('resize', repositionAll);
                             })();
                         </script>
 
