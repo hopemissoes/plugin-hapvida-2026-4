@@ -2257,22 +2257,29 @@ trait ShortcodeFormTrait {
                                         cities: cities, highlightIndex: -1
                                     };
 
-                                    // Mousedown apenas previne a perda de foco no input.
-                                    // O pick acontece no click — com a lista ainda visivel — e
-                                    // stopPropagation impede que o click vaze pra elementos por
-                                    // baixo (ex.: o overlay do popup, que fecharia o popup).
-                                    list.addEventListener('mousedown', function(e){
+                                    // Bloqueio total da propagacao do tap/click pra fora da lista
+                                    // — evita que qualquer handler de popup/overlay receba o evento.
+                                    var stop = function(e){
                                         var li = e.target.closest && e.target.closest('li[data-value]');
-                                        if (li) e.preventDefault();
-                                    });
+                                        if (!li) return null;
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        if (e.stopImmediatePropagation) e.stopImmediatePropagation();
+                                        return li;
+                                    };
+                                    list.addEventListener('mousedown', stop, true);
+                                    list.addEventListener('mouseup', stop, true);
+                                    list.addEventListener('touchstart', stop, true);
+                                    list.addEventListener('touchend', stop, true);
+                                    list.addEventListener('pointerdown', stop, true);
+                                    list.addEventListener('pointerup', stop, true);
                                     list.addEventListener('click', function(e){
-                                        var li = e.target.closest && e.target.closest('li[data-value]');
+                                        var li = stop(e);
                                         if (li) {
-                                            e.preventDefault();
-                                            e.stopPropagation();
+                                            console.log('[hapvida cidade] pick:', li.getAttribute('data-value'));
                                             pick(inst, li.getAttribute('data-value'));
                                         }
-                                    });
+                                    }, true);
 
                                     // Fecha quando o input some do layout (popup fechado, por ex.)
                                     if (typeof IntersectionObserver !== 'undefined') {
