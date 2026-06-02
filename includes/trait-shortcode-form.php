@@ -2219,6 +2219,28 @@ trait ShortcodeFormTrait {
                                 var list = field.querySelector('.hapvida-cidade-list');
                                 if (!input || !select || !list) return;
 
+                                // Move o dropdown para fora do campo: anexado ao <body>
+                                // com position:fixed, escapa de containers com overflow
+                                // ou transform (popups, modais, parents com clipping).
+                                if (list.parentNode !== document.body) {
+                                    document.body.appendChild(list);
+                                }
+                                list.style.position = 'fixed';
+                                list.style.zIndex = '1000001';
+
+                                function reposition(){
+                                    var r = input.getBoundingClientRect();
+                                    if (r.width === 0 && r.height === 0) {
+                                        // Input invisivel (popup fechado, por ex.) - esconde a lista
+                                        list.hidden = true;
+                                        input.setAttribute('aria-expanded', 'false');
+                                        return;
+                                    }
+                                    list.style.top = (r.bottom + 4) + 'px';
+                                    list.style.left = r.left + 'px';
+                                    list.style.width = r.width + 'px';
+                                }
+
                                 var cities = [];
                                 Array.prototype.forEach.call(select.options, function(opt){
                                     if (opt.value) cities.push(opt.value);
@@ -2258,6 +2280,7 @@ trait ShortcodeFormTrait {
                                 }
 
                                 function openList(){
+                                    reposition();
                                     list.hidden = false;
                                     input.setAttribute('aria-expanded', 'true');
                                 }
@@ -2333,7 +2356,10 @@ trait ShortcodeFormTrait {
                                     }
                                 });
                                 document.addEventListener('click', function(e){
-                                    if (!field.contains(e.target)) closeList();
+                                    if (list.hidden) return;
+                                    if (field.contains(e.target)) return;
+                                    if (list.contains(e.target)) return;
+                                    closeList();
                                 });
                                 input.addEventListener('blur', function(){
                                     // Se digitou um nome exato, aceita como selecao
@@ -2348,6 +2374,26 @@ trait ShortcodeFormTrait {
                                 });
 
                                 if (select.value) input.value = select.value;
+
+                                // Reposiciona ao rolar (em qualquer ancestor) e ao redimensionar
+                                window.addEventListener('scroll', function(){
+                                    if (!list.hidden) reposition();
+                                }, true);
+                                window.addEventListener('resize', function(){
+                                    if (!list.hidden) reposition();
+                                });
+
+                                // Fecha o dropdown quando o input some do layout
+                                // (ex.: popup fechado com display:none)
+                                if (typeof IntersectionObserver !== 'undefined') {
+                                    new IntersectionObserver(function(entries){
+                                        for (var i = 0; i < entries.length; i++) {
+                                            if (!entries[i].isIntersecting && !list.hidden) {
+                                                closeList();
+                                            }
+                                        }
+                                    }, { threshold: 0 }).observe(input);
+                                }
                             })();
                         </script>
 
