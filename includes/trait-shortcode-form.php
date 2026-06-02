@@ -2257,10 +2257,21 @@ trait ShortcodeFormTrait {
                                         cities: cities, highlightIndex: -1
                                     };
 
-                                    // Mousedown na lista seleciona a cidade (mantem foco no input)
+                                    // Mousedown apenas previne a perda de foco no input.
+                                    // O pick acontece no click — com a lista ainda visivel — e
+                                    // stopPropagation impede que o click vaze pra elementos por
+                                    // baixo (ex.: o overlay do popup, que fecharia o popup).
                                     list.addEventListener('mousedown', function(e){
                                         var li = e.target.closest && e.target.closest('li[data-value]');
-                                        if (li) { e.preventDefault(); pick(inst, li.getAttribute('data-value')); }
+                                        if (li) e.preventDefault();
+                                    });
+                                    list.addEventListener('click', function(e){
+                                        var li = e.target.closest && e.target.closest('li[data-value]');
+                                        if (li) {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            pick(inst, li.getAttribute('data-value'));
+                                        }
                                     });
 
                                     // Fecha quando o input some do layout (popup fechado, por ex.)
