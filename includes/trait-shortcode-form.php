@@ -232,6 +232,73 @@ trait ShortcodeFormTrait {
                 stroke: rgba(0,84,184,0.35);
             }
 
+            /* ===== COMBOBOX PESQUISAVEL DE CIDADE ===== */
+            #hapvida-field-cidade {
+                position: relative;
+            }
+            .hapvida-cidade-hidden {
+                position: absolute !important;
+                width: 1px !important;
+                height: 1px !important;
+                opacity: 0 !important;
+                pointer-events: none !important;
+                overflow: hidden;
+                clip: rect(0 0 0 0);
+            }
+            .hapvida-cidade-search {
+                flex: 1;
+                background: none;
+                border: none;
+                outline: none;
+                color: #0a2540;
+                font-size: 14px;
+                font-family: 'Open Sans', sans-serif;
+                font-weight: 500;
+                width: 100%;
+                min-width: 0;
+                height: auto !important;
+                padding: 0 !important;
+                box-shadow: none !important;
+            }
+            .hapvida-cidade-search::placeholder {
+                color: rgba(0,84,184,0.45);
+            }
+            .hapvida-cidade-list {
+                position: absolute;
+                top: calc(100% + 4px);
+                left: 0;
+                right: 0;
+                margin: 0;
+                padding: 6px 0;
+                list-style: none;
+                background: #fff;
+                border: 1px solid rgba(0,84,184,0.18);
+                border-radius: 12px;
+                box-shadow: 0 8px 24px rgba(0,0,0,0.10);
+                max-height: 260px;
+                overflow-y: auto;
+                z-index: 50;
+            }
+            .hapvida-cidade-list li {
+                padding: 10px 16px;
+                font-size: 14px;
+                color: #0a2540;
+                cursor: pointer;
+                transition: background 0.15s;
+            }
+            .hapvida-cidade-list li:hover,
+            .hapvida-cidade-list li.is-highlighted {
+                background: rgba(0,84,184,0.08);
+            }
+            .hapvida-cidade-list li.is-empty {
+                color: rgba(0,84,184,0.5);
+                cursor: default;
+                font-style: italic;
+            }
+            .hapvida-cidade-list li.is-empty:hover {
+                background: transparent;
+            }
+
             /* ===== CONTAINER DE IDADES ===== */
             .age-inputs {
                 display: grid;
@@ -1166,7 +1233,12 @@ trait ShortcodeFormTrait {
                                         <circle cx="12" cy="10" r="3"/>
                                     </svg>
                                 </span>
-                                <select id="hapvida-cidade" name="form_fields[cidade]" required autocomplete="off">
+                                <input type="text" class="hapvida-cidade-search" id="hapvida-cidade-search"
+                                       placeholder="Digite sua cidade..."
+                                       autocomplete="off"
+                                       role="combobox" aria-autocomplete="list"
+                                       aria-controls="hapvida-cidade-list" aria-expanded="false">
+                                <select id="hapvida-cidade" name="form_fields[cidade]" required autocomplete="off" class="hapvida-cidade-hidden" tabindex="-1" aria-hidden="true">
                                     <option value="">Cidade</option>
                                     <?php foreach ($city_list as $city): ?>
                                         <option value="<?php echo esc_attr($city); ?>">
@@ -1179,6 +1251,7 @@ trait ShortcodeFormTrait {
                                         <polyline points="6 9 12 15 18 9"/>
                                     </svg>
                                 </span>
+                                <ul class="hapvida-cidade-list" id="hapvida-cidade-list" role="listbox" hidden></ul>
                             </div>
                             <div class="hapvida-field" id="hapvida-field-tipo-plano">
                                 <span class="hapvida-field-icon">
@@ -2136,6 +2209,146 @@ trait ShortcodeFormTrait {
                                 });
 
                             })(jQuery);
+
+                            // ===== COMBOBOX PESQUISAVEL DE CIDADE =====
+                            (function(){
+                                var field = document.getElementById('hapvida-field-cidade');
+                                if (!field) return;
+                                var input = field.querySelector('.hapvida-cidade-search');
+                                var select = field.querySelector('#hapvida-cidade');
+                                var list = field.querySelector('.hapvida-cidade-list');
+                                if (!input || !select || !list) return;
+
+                                var cities = [];
+                                Array.prototype.forEach.call(select.options, function(opt){
+                                    if (opt.value) cities.push(opt.value);
+                                });
+
+                                function norm(s){
+                                    return (s || '').toString().toLowerCase()
+                                        .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                                }
+
+                                var highlightIndex = -1;
+
+                                function render(query){
+                                    var q = norm(query);
+                                    var filtered = q
+                                        ? cities.filter(function(c){ return norm(c).indexOf(q) !== -1; })
+                                        : cities.slice();
+
+                                    list.innerHTML = '';
+                                    highlightIndex = -1;
+
+                                    if (filtered.length === 0) {
+                                        var empty = document.createElement('li');
+                                        empty.className = 'is-empty';
+                                        empty.textContent = 'Nenhuma cidade encontrada';
+                                        list.appendChild(empty);
+                                        return;
+                                    }
+
+                                    filtered.forEach(function(city){
+                                        var li = document.createElement('li');
+                                        li.textContent = city;
+                                        li.setAttribute('role', 'option');
+                                        li.setAttribute('data-value', city);
+                                        list.appendChild(li);
+                                    });
+                                }
+
+                                function openList(){
+                                    list.hidden = false;
+                                    input.setAttribute('aria-expanded', 'true');
+                                }
+                                function closeList(){
+                                    list.hidden = true;
+                                    input.setAttribute('aria-expanded', 'false');
+                                    highlightIndex = -1;
+                                }
+                                function pick(city){
+                                    input.value = city;
+                                    select.value = city;
+                                    try {
+                                        select.dispatchEvent(new Event('change', { bubbles: true }));
+                                    } catch(e) {
+                                        var ev = document.createEvent('Event');
+                                        ev.initEvent('change', true, true);
+                                        select.dispatchEvent(ev);
+                                    }
+                                    closeList();
+                                }
+                                function setHighlight(newIdx){
+                                    var items = list.querySelectorAll('li:not(.is-empty)');
+                                    if (items.length === 0) return;
+                                    highlightIndex = ((newIdx % items.length) + items.length) % items.length;
+                                    for (var i = 0; i < items.length; i++) {
+                                        items[i].classList.toggle('is-highlighted', i === highlightIndex);
+                                    }
+                                    if (items[highlightIndex]) items[highlightIndex].scrollIntoView({ block: 'nearest' });
+                                }
+                                function matchCity(typed){
+                                    var t = (typed || '').trim().toLowerCase();
+                                    if (!t) return null;
+                                    for (var i = 0; i < cities.length; i++) {
+                                        if (cities[i].toLowerCase() === t) return cities[i];
+                                    }
+                                    return null;
+                                }
+
+                                input.addEventListener('focus', function(){
+                                    render(input.value);
+                                    openList();
+                                });
+                                input.addEventListener('input', function(){
+                                    select.value = '';
+                                    render(input.value);
+                                    openList();
+                                });
+                                input.addEventListener('keydown', function(e){
+                                    if (e.key === 'ArrowDown') {
+                                        e.preventDefault();
+                                        if (list.hidden) { render(input.value); openList(); }
+                                        setHighlight(highlightIndex + 1);
+                                    } else if (e.key === 'ArrowUp') {
+                                        e.preventDefault();
+                                        setHighlight(highlightIndex - 1);
+                                    } else if (e.key === 'Enter') {
+                                        if (!list.hidden && highlightIndex >= 0) {
+                                            var items = list.querySelectorAll('li:not(.is-empty)');
+                                            if (items[highlightIndex]) {
+                                                e.preventDefault();
+                                                pick(items[highlightIndex].getAttribute('data-value'));
+                                            }
+                                        }
+                                    } else if (e.key === 'Escape') {
+                                        closeList();
+                                    }
+                                });
+                                list.addEventListener('mousedown', function(e){
+                                    var li = e.target.closest ? e.target.closest('li[data-value]') : null;
+                                    if (li) {
+                                        e.preventDefault(); // mantem foco no input
+                                        pick(li.getAttribute('data-value'));
+                                    }
+                                });
+                                document.addEventListener('click', function(e){
+                                    if (!field.contains(e.target)) closeList();
+                                });
+                                input.addEventListener('blur', function(){
+                                    // Se digitou um nome exato, aceita como selecao
+                                    var match = matchCity(input.value);
+                                    if (match) {
+                                        input.value = match;
+                                        select.value = match;
+                                    } else if (select.value) {
+                                        // Reverte para o ultimo valor valido se houver
+                                        input.value = select.value;
+                                    }
+                                });
+
+                                if (select.value) input.value = select.value;
+                            })();
                         </script>
 
                         <?php
