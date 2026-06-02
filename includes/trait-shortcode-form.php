@@ -2251,20 +2251,28 @@ trait ShortcodeFormTrait {
 
                                     // Bloqueio total da propagacao do tap/click pra fora da lista
                                     // — evita que qualquer handler de popup/overlay receba o evento.
-                                    var stop = function(e){
+                                    // stopProp: apenas para a propagacao. Para touch events,
+                                    // preventDefault impediria a sintese do click no iOS — entao
+                                    // touch/pointer events usam SO esta versao.
+                                    var stopProp = function(e){
                                         var li = e.target.closest && e.target.closest('li[data-value]');
                                         if (!li) return null;
-                                        e.preventDefault();
                                         e.stopPropagation();
                                         if (e.stopImmediatePropagation) e.stopImmediatePropagation();
                                         return li;
                                     };
+                                    // stop: stopProp + preventDefault (so para mouse/click)
+                                    var stop = function(e){
+                                        var li = stopProp(e);
+                                        if (li) e.preventDefault();
+                                        return li;
+                                    };
                                     list.addEventListener('mousedown', stop, true);
-                                    list.addEventListener('mouseup', stop, true);
-                                    list.addEventListener('touchstart', stop, true);
-                                    list.addEventListener('touchend', stop, true);
-                                    list.addEventListener('pointerdown', stop, true);
-                                    list.addEventListener('pointerup', stop, true);
+                                    list.addEventListener('mouseup', stopProp, true);
+                                    list.addEventListener('touchstart', stopProp, true);
+                                    list.addEventListener('touchend', stopProp, true);
+                                    list.addEventListener('pointerdown', stopProp, true);
+                                    list.addEventListener('pointerup', stopProp, true);
                                     list.addEventListener('click', function(e){
                                         var li = stop(e);
                                         if (li) pick(inst, li.getAttribute('data-value'));
