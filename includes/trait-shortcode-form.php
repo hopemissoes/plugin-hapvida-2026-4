@@ -2267,10 +2267,7 @@ trait ShortcodeFormTrait {
                                     list.addEventListener('pointerup', stop, true);
                                     list.addEventListener('click', function(e){
                                         var li = stop(e);
-                                        if (li) {
-                                            console.log('[hapvida cidade] pick:', li.getAttribute('data-value'));
-                                            pick(inst, li.getAttribute('data-value'));
-                                        }
+                                        if (li) pick(inst, li.getAttribute('data-value'));
                                     }, true);
 
                                     if (select.value && !input.value) input.value = select.value;
