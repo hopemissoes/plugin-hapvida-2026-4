@@ -2211,189 +2211,223 @@ trait ShortcodeFormTrait {
                             })(jQuery);
 
                             // ===== COMBOBOX PESQUISAVEL DE CIDADE =====
+                            // Usa event delegation no document para suportar:
+                            //  - formulario duplicado na mesma pagina (visivel + popup)
+                            //  - formulario injetado dinamicamente
+                            //  - inicializacao preguicosa: so monta no primeiro foco
                             (function(){
-                                var field = document.getElementById('hapvida-field-cidade');
-                                if (!field) return;
-                                var input = field.querySelector('.hapvida-cidade-search');
-                                var select = field.querySelector('#hapvida-cidade');
-                                var list = field.querySelector('.hapvida-cidade-list');
-                                if (!input || !select || !list) return;
+                                if (window.hapvidaCidadeComboboxReady) return;
+                                window.hapvidaCidadeComboboxReady = true;
 
-                                // Move o dropdown para fora do campo: anexado ao <body>
-                                // com position:fixed, escapa de containers com overflow
-                                // ou transform (popups, modais, parents com clipping).
-                                if (list.parentNode !== document.body) {
-                                    document.body.appendChild(list);
-                                }
-                                list.style.position = 'fixed';
-                                list.style.zIndex = '1000001';
-
-                                function reposition(){
-                                    var r = input.getBoundingClientRect();
-                                    if (r.width === 0 && r.height === 0) {
-                                        // Input invisivel (popup fechado, por ex.) - esconde a lista
-                                        list.hidden = true;
-                                        input.setAttribute('aria-expanded', 'false');
-                                        return;
-                                    }
-                                    list.style.top = (r.bottom + 4) + 'px';
-                                    list.style.left = r.left + 'px';
-                                    list.style.width = r.width + 'px';
-                                }
-
-                                var cities = [];
-                                Array.prototype.forEach.call(select.options, function(opt){
-                                    if (opt.value) cities.push(opt.value);
-                                });
+                                var allInstances = [];
 
                                 function norm(s){
                                     return (s || '').toString().toLowerCase()
                                         .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
                                 }
 
-                                var highlightIndex = -1;
+                                function initFor(input){
+                                    if (input._hapvidaCidadeInit) return input._hapvidaCidadeInit;
+                                    var field = (input.closest && input.closest('[id="hapvida-field-cidade"]')) || input.parentNode;
+                                    if (!field) return null;
+                                    var select = field.querySelector('#hapvida-cidade');
+                                    var list = field.querySelector('.hapvida-cidade-list');
+                                    if (!select || !list) return null;
 
-                                function render(query){
+                                    // Move o dropdown para o <body> com position:fixed \u2014
+                                    // escapa de containers com overflow ou transform (popups).
+                                    if (list.parentNode !== document.body) {
+                                        document.body.appendChild(list);
+                                    }
+                                    // Garante ID unico se houver duplicacao (form renderizado 2x)
+                                    if (list.id && document.querySelectorAll('[id="' + list.id + '"]').length > 1) {
+                                        list.id = 'hapvida-cidade-list-' + Math.random().toString(36).slice(2, 8);
+                                        input.setAttribute('aria-controls', list.id);
+                                    }
+                                    list.style.position = 'fixed';
+                                    list.style.zIndex = '1000001';
+
+                                    var cities = [];
+                                    for (var i = 0; i < select.options.length; i++) {
+                                        if (select.options[i].value) cities.push(select.options[i].value);
+                                    }
+
+                                    var inst = {
+                                        input: input, select: select, list: list, field: field,
+                                        cities: cities, highlightIndex: -1
+                                    };
+
+                                    // Mousedown na lista seleciona a cidade (mantem foco no input)
+                                    list.addEventListener('mousedown', function(e){
+                                        var li = e.target.closest && e.target.closest('li[data-value]');
+                                        if (li) { e.preventDefault(); pick(inst, li.getAttribute('data-value')); }
+                                    });
+
+                                    // Fecha quando o input some do layout (popup fechado, por ex.)
+                                    if (typeof IntersectionObserver !== 'undefined') {
+                                        new IntersectionObserver(function(entries){
+                                            for (var i = 0; i < entries.length; i++) {
+                                                if (!entries[i].isIntersecting && !inst.list.hidden) closeList(inst);
+                                            }
+                                        }, { threshold: 0 }).observe(input);
+                                    }
+
+                                    if (select.value && !input.value) input.value = select.value;
+
+                                    input._hapvidaCidadeInit = inst;
+                                    allInstances.push(inst);
+                                    return inst;
+                                }
+
+                                function instFor(target){
+                                    if (!target || !target.closest) return null;
+                                    var input = target.closest('.hapvida-cidade-search');
+                                    if (!input) return null;
+                                    return initFor(input);
+                                }
+
+                                function reposition(inst){
+                                    var r = inst.input.getBoundingClientRect();
+                                    if (r.width === 0 && r.height === 0) {
+                                        inst.list.hidden = true;
+                                        inst.input.setAttribute('aria-expanded', 'false');
+                                        return;
+                                    }
+                                    inst.list.style.top = (r.bottom + 4) + 'px';
+                                    inst.list.style.left = r.left + 'px';
+                                    inst.list.style.width = r.width + 'px';
+                                }
+
+                                function render(inst, query){
                                     var q = norm(query);
                                     var filtered = q
-                                        ? cities.filter(function(c){ return norm(c).indexOf(q) !== -1; })
-                                        : cities.slice();
-
-                                    list.innerHTML = '';
-                                    highlightIndex = -1;
-
+                                        ? inst.cities.filter(function(c){ return norm(c).indexOf(q) !== -1; })
+                                        : inst.cities.slice();
+                                    inst.list.innerHTML = '';
+                                    inst.highlightIndex = -1;
                                     if (filtered.length === 0) {
                                         var empty = document.createElement('li');
                                         empty.className = 'is-empty';
                                         empty.textContent = 'Nenhuma cidade encontrada';
-                                        list.appendChild(empty);
+                                        inst.list.appendChild(empty);
                                         return;
                                     }
-
                                     filtered.forEach(function(city){
                                         var li = document.createElement('li');
                                         li.textContent = city;
                                         li.setAttribute('role', 'option');
                                         li.setAttribute('data-value', city);
-                                        list.appendChild(li);
+                                        inst.list.appendChild(li);
                                     });
                                 }
 
-                                function openList(){
-                                    reposition();
-                                    list.hidden = false;
-                                    input.setAttribute('aria-expanded', 'true');
+                                function openList(inst){
+                                    reposition(inst);
+                                    inst.list.hidden = false;
+                                    inst.input.setAttribute('aria-expanded', 'true');
                                 }
-                                function closeList(){
-                                    list.hidden = true;
-                                    input.setAttribute('aria-expanded', 'false');
-                                    highlightIndex = -1;
+                                function closeList(inst){
+                                    inst.list.hidden = true;
+                                    inst.input.setAttribute('aria-expanded', 'false');
+                                    inst.highlightIndex = -1;
                                 }
-                                function pick(city){
-                                    input.value = city;
-                                    select.value = city;
-                                    try {
-                                        select.dispatchEvent(new Event('change', { bubbles: true }));
-                                    } catch(e) {
+                                function pick(inst, city){
+                                    inst.input.value = city;
+                                    inst.select.value = city;
+                                    try { inst.select.dispatchEvent(new Event('change', { bubbles: true })); }
+                                    catch(e) {
                                         var ev = document.createEvent('Event');
                                         ev.initEvent('change', true, true);
-                                        select.dispatchEvent(ev);
+                                        inst.select.dispatchEvent(ev);
                                     }
-                                    closeList();
+                                    closeList(inst);
                                 }
-                                function setHighlight(newIdx){
-                                    var items = list.querySelectorAll('li:not(.is-empty)');
+                                function setHighlight(inst, newIdx){
+                                    var items = inst.list.querySelectorAll('li:not(.is-empty)');
                                     if (items.length === 0) return;
-                                    highlightIndex = ((newIdx % items.length) + items.length) % items.length;
+                                    inst.highlightIndex = ((newIdx % items.length) + items.length) % items.length;
                                     for (var i = 0; i < items.length; i++) {
-                                        items[i].classList.toggle('is-highlighted', i === highlightIndex);
+                                        items[i].classList.toggle('is-highlighted', i === inst.highlightIndex);
                                     }
-                                    if (items[highlightIndex]) items[highlightIndex].scrollIntoView({ block: 'nearest' });
+                                    if (items[inst.highlightIndex]) items[inst.highlightIndex].scrollIntoView({ block: 'nearest' });
                                 }
-                                function matchCity(typed){
+                                function matchCity(inst, typed){
                                     var t = (typed || '').trim().toLowerCase();
                                     if (!t) return null;
-                                    for (var i = 0; i < cities.length; i++) {
-                                        if (cities[i].toLowerCase() === t) return cities[i];
+                                    for (var i = 0; i < inst.cities.length; i++) {
+                                        if (inst.cities[i].toLowerCase() === t) return inst.cities[i];
                                     }
                                     return null;
                                 }
 
-                                input.addEventListener('focus', function(){
-                                    render(input.value);
-                                    openList();
+                                // ===== Listeners DELEGADOS no document =====
+                                document.addEventListener('focus', function(e){
+                                    var inst = instFor(e.target);
+                                    if (!inst) return;
+                                    render(inst, inst.input.value);
+                                    openList(inst);
+                                }, true); // capture: focus nao bubble
+
+                                document.addEventListener('blur', function(e){
+                                    var inst = instFor(e.target);
+                                    if (!inst) return;
+                                    var match = matchCity(inst, inst.input.value);
+                                    if (match) {
+                                        inst.input.value = match;
+                                        inst.select.value = match;
+                                    } else if (inst.select.value) {
+                                        inst.input.value = inst.select.value;
+                                    }
+                                }, true);
+
+                                document.addEventListener('input', function(e){
+                                    var inst = instFor(e.target);
+                                    if (!inst) return;
+                                    inst.select.value = '';
+                                    render(inst, inst.input.value);
+                                    openList(inst);
                                 });
-                                input.addEventListener('input', function(){
-                                    select.value = '';
-                                    render(input.value);
-                                    openList();
-                                });
-                                input.addEventListener('keydown', function(e){
+
+                                document.addEventListener('keydown', function(e){
+                                    var inst = instFor(e.target);
+                                    if (!inst) return;
                                     if (e.key === 'ArrowDown') {
                                         e.preventDefault();
-                                        if (list.hidden) { render(input.value); openList(); }
-                                        setHighlight(highlightIndex + 1);
+                                        if (inst.list.hidden) { render(inst, inst.input.value); openList(inst); }
+                                        setHighlight(inst, inst.highlightIndex + 1);
                                     } else if (e.key === 'ArrowUp') {
                                         e.preventDefault();
-                                        setHighlight(highlightIndex - 1);
+                                        setHighlight(inst, inst.highlightIndex - 1);
                                     } else if (e.key === 'Enter') {
-                                        if (!list.hidden && highlightIndex >= 0) {
-                                            var items = list.querySelectorAll('li:not(.is-empty)');
-                                            if (items[highlightIndex]) {
+                                        if (!inst.list.hidden && inst.highlightIndex >= 0) {
+                                            var items = inst.list.querySelectorAll('li:not(.is-empty)');
+                                            if (items[inst.highlightIndex]) {
                                                 e.preventDefault();
-                                                pick(items[highlightIndex].getAttribute('data-value'));
+                                                pick(inst, items[inst.highlightIndex].getAttribute('data-value'));
                                             }
                                         }
                                     } else if (e.key === 'Escape') {
-                                        closeList();
+                                        closeList(inst);
                                     }
                                 });
-                                list.addEventListener('mousedown', function(e){
-                                    var li = e.target.closest ? e.target.closest('li[data-value]') : null;
-                                    if (li) {
-                                        e.preventDefault(); // mantem foco no input
-                                        pick(li.getAttribute('data-value'));
-                                    }
-                                });
+
                                 document.addEventListener('click', function(e){
-                                    if (list.hidden) return;
-                                    if (field.contains(e.target)) return;
-                                    if (list.contains(e.target)) return;
-                                    closeList();
-                                });
-                                input.addEventListener('blur', function(){
-                                    // Se digitou um nome exato, aceita como selecao
-                                    var match = matchCity(input.value);
-                                    if (match) {
-                                        input.value = match;
-                                        select.value = match;
-                                    } else if (select.value) {
-                                        // Reverte para o ultimo valor valido se houver
-                                        input.value = select.value;
+                                    for (var i = 0; i < allInstances.length; i++) {
+                                        var inst = allInstances[i];
+                                        if (inst.list.hidden) continue;
+                                        if (inst.field.contains(e.target)) continue;
+                                        if (inst.list.contains(e.target)) continue;
+                                        closeList(inst);
                                     }
                                 });
 
-                                if (select.value) input.value = select.value;
-
-                                // Reposiciona ao rolar (em qualquer ancestor) e ao redimensionar
-                                window.addEventListener('scroll', function(){
-                                    if (!list.hidden) reposition();
-                                }, true);
-                                window.addEventListener('resize', function(){
-                                    if (!list.hidden) reposition();
-                                });
-
-                                // Fecha o dropdown quando o input some do layout
-                                // (ex.: popup fechado com display:none)
-                                if (typeof IntersectionObserver !== 'undefined') {
-                                    new IntersectionObserver(function(entries){
-                                        for (var i = 0; i < entries.length; i++) {
-                                            if (!entries[i].isIntersecting && !list.hidden) {
-                                                closeList();
-                                            }
-                                        }
-                                    }, { threshold: 0 }).observe(input);
+                                function repositionAll(){
+                                    for (var i = 0; i < allInstances.length; i++) {
+                                        if (!allInstances[i].list.hidden) reposition(allInstances[i]);
+                                    }
                                 }
+                                window.addEventListener('scroll', repositionAll, true);
+                                window.addEventListener('resize', repositionAll);
                             })();
                         </script>
 
