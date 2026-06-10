@@ -279,9 +279,11 @@ trait AdminScriptsTrait {
                     <div style="padding:15px;background:#f8f9fa;border-radius:5px;">
                         <h4 style="margin:0 0 10px 0;color:#0054B8;">Informações do Atendimento</h4>
                         <p><strong>Vendedor:</strong> ${lead.vendedor || 'N/A'}</p>
+                        <p><strong>Telefone do Vendedor:</strong> ${lead.vendedor_telefone || 'N/A'}</p>
                         <p><strong>Grupo:</strong> ${lead.grupo || 'N/A'}</p>
                         <p><strong>Status:</strong> ${lead.status || 'N/A'}</p>
                         <p><strong>Data:</strong> ${lead.created_at || 'N/A'}</p>
+                        ${lead.error ? `<p style="color:#dc3545;"><strong>Erro:</strong> ${lead.error}</p>` : ''}
                     </div>
                 </div>`;
 
