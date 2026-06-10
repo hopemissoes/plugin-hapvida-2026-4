@@ -584,7 +584,10 @@ trait AdminAjaxTrait {
             'cidade' => isset($data['cidade']) ? $data['cidade'] : 'N/A',
             'grupo' => isset($data['grupo']) ? strtoupper($data['grupo']) : 'N/A',
             'vendedor' => isset($data['vendedor']) ? $data['vendedor'] :
-                (isset($data['atendente']) ? $data['atendente'] : 'N/A'),
+                (isset($data['atendente']) ? $data['atendente'] :
+                    (isset($data['vendedor_nome']) ? $data['vendedor_nome'] : 'N/A')),
+            'vendedor_telefone' => isset($data['vendedor_telefone']) ? $data['vendedor_telefone'] :
+                (isset($data['telefone_vendedor']) ? $data['telefone_vendedor'] : 'N/A'),
             'plano' => isset($data['qual_plano']) ? $data['qual_plano'] :
                 (isset($data['tipo_de_plano']) ? $data['tipo_de_plano'] : 'N/A'),
             'qtd_pessoas' => isset($data['qtd_pessoas']) ? $data['qtd_pessoas'] : '1',
@@ -594,7 +597,8 @@ trait AdminAjaxTrait {
             'status' => isset($webhook_found['status']) ? $webhook_found['status'] : 'pending',
             'lead_id' => $lead_id_real ? $lead_id_real : 'N/A', // Usa o ID real do lead
             'webhook_id' => $webhook_id, // Mantém também o ID do webhook para referência
-            'observacoes' => isset($data['observacoes']) ? $data['observacoes'] : ''
+            'observacoes' => isset($data['observacoes']) ? $data['observacoes'] : '',
+            'error' => isset($webhook_found['error']) ? $webhook_found['error'] : '',
         );
 
         // Se idades for array, converte para string
